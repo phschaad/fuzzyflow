@@ -22,8 +22,12 @@ def generate_split_set(
 ) -> np.ndarray:
     n_tiny = round((tiny_percentage / 100) * n)
     n_regular = n - n_tiny
-    tiny_sample = np.random.default_rng().uniform(tiny_low, tiny_high, n_tiny)
-    large_sample = np.random.default_rng().uniform(regular_low, regular_high, n_regular)
+    tiny_sample = np.random.default_rng().uniform(
+        tiny_low, tiny_high, n_tiny
+    )
+    large_sample = np.random.default_rng().uniform(
+        regular_low, regular_high, n_regular
+    )
     conc = np.concatenate((tiny_sample, large_sample))
     np.random.shuffle(conc)
     return conc
