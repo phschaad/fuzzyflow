@@ -30,4 +30,5 @@ def test_naive_accuracy():
     print('======================================')
 
 if __name__=='__main__':
+    pass
     #test_naive_accuracy()

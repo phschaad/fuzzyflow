@@ -2,3 +2,7 @@ __pycache__/
 _dacegraphs/
 .dacecache/
 
+.vscode/*
+
+!.vscode/fuzzy-dace.code-workspace
+
