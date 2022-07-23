@@ -4,6 +4,7 @@
 
 from copy import deepcopy
 from dace.sdfg import SDFG, nodes as nd
+from dace.codegen.compiled_sdfg import CompiledSDFG
 from dace.transformation.transformation import SubgraphTransformation, PatternTransformation
 from typing import List, Union
 
@@ -41,6 +42,7 @@ class TransformationVerifier:
             recut = True
 
         if self._cutout is None or recut:
+            print('Finding ideal cutout')
             self._cutout = find_cutout_for_transformation(
                 self.sdfg, self.xform, self.cutout_strategy
             )
@@ -51,6 +53,7 @@ class TransformationVerifier:
             out_nodes: List[nd.AccessNode] = self._cutout.output_arrays()
             for out_node in out_nodes:
                 self._cutout.arrays[out_node.data].transient = False
+            print('Cutout obtained')
 
         return self._cutout
 
@@ -58,27 +61,39 @@ class TransformationVerifier:
     def verify(self, n_samples: int = 1) -> bool:
         cutout = self.cutout()
         original_cutout = deepcopy(cutout)
+        print('Applying transformation')
         apply_transformation(cutout, self.xform)
+
+        print('Compiling pre-transformation cutout')
+        prog_orig: CompiledSDFG = original_cutout.compile()
+        print('Compiling post-transformation cutout')
+        prog_xformed: CompiledSDFG = cutout.compile()
+        print(
+            'Sampling data over', n_samples,
+            'run' + ('s' if n_samples > 1 else '')
+        )
 
         seed = 12121
         sampler = DataSampler(self.sampling_strategy, seed)
 
         for i in range(n_samples):
-            symbols_map = sampler.sample_symbols_map_for(original_cutout)
+            symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
+                original_cutout
+            )
             inputs = sampler.sample_inputs_for(original_cutout, symbols_map)
-            original_outputs = sampler.generate_output_containers_for(
+            out_orig = sampler.generate_output_containers_for(
                 original_cutout, symbols_map
             )
-            outputs = sampler.generate_output_containers_for(
+            out_xformed = sampler.generate_output_containers_for(
                 original_cutout, symbols_map
             )
 
-            original_cutout(**inputs, **original_outputs, **symbols_map)
-            cutout(**inputs, **outputs, **symbols_map)
+            prog_orig.__call__(**inputs, **out_orig, **free_symbols_map)
+            prog_xformed.__call__(**inputs, **out_xformed, **free_symbols_map)
 
-            for k in original_outputs.keys():
-                oval = original_outputs[k]
-                nval = outputs[k]
+            for k in out_orig.keys():
+                oval = out_orig[k]
+                nval = out_xformed[k]
                 if (oval != nval).any():
                     return False
 

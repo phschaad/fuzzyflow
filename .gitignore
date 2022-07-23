@@ -4,5 +4,5 @@ _dacegraphs/
 
 .vscode/*
 
-!.vscode/fuzzy-dace.code-workspace
+!.vscode/fuzzyflow.code-workspace
 

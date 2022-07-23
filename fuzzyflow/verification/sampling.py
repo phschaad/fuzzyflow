@@ -7,8 +7,10 @@ import random
 from typing import Dict, List, Set, Tuple
 from dace.sdfg import SDFG, nodes as nd
 from dace.data import Data
-from dace import symbol as sym
+from dace.symbolic import symbol
 import numpy as np
+from sympy.core import Expr
+from sympy.core.numbers import Number
 
 
 class SamplingStrategy(Flag):
@@ -44,8 +46,21 @@ class DataSampler:
             name, array = dat
             shape = []
             for x in array.shape:
-                if isinstance(x, sym):
-                    shape.append(symbols_map[x.name])
+                if isinstance(x, symbol):
+                    if x.name in symbols_map:
+                        shape.append(symbols_map[x.name])
+                    else:
+                        raise Exception(
+                            'Can\'t find a definition for symbol', x.name
+                        )
+                elif isinstance(x, Expr):
+                    res = x.subs(symbols_map)
+                    if isinstance(res, Number) and res.is_Integer:
+                        shape.append(int(res))
+                    else:
+                        raise Exception(
+                            'Can\'t evaluate shape expression', x
+                        )
                 else:
                     shape.append(x)
             if sample:
@@ -59,7 +74,14 @@ class DataSampler:
     def sample_symbols_map_for(
         self, sdfg: SDFG, maxval: int = 256
     ) -> Dict[str, int]:
-        return { k: random.randint(0, maxval) for k in sdfg.free_symbols}
+        symbol_map = dict()
+        free_symbols_map = dict()
+        for k, v in sdfg.constants.items():
+            symbol_map[k] = int(v)
+        for k in sdfg.free_symbols:
+            symbol_map[k] = random.randint(0, maxval)
+            free_symbols_map[k] = symbol_map[k]
+        return symbol_map, free_symbols_map
 
 
     def sample_inputs_for(
