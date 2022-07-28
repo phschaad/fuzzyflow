@@ -1,0 +1,1 @@
+{"_subgraph":{"0":2,"1":4,"2":3},"expr_index":0,"sdfg_id":0,"state_id":1,"transformation":"AugAssignToWCR","type":"PatternTransformation","docstring":"\n    Converts an augmented assignment (\"a += b\", \"a = a + b\") into a tasklet\n    with a write-conflict resolution.\n    "}

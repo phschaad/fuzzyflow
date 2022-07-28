@@ -3,11 +3,13 @@
 # License. For details, see the LICENSE file.
 
 import argparse
-from dace.sdfg import SDFG
 import os
 
+from dace.sdfg import SDFG
+
 from fuzzyflow import cutout
-from fuzzyflow.util import apply_transformation, load_transformation_from_file
+from fuzzyflow.util import load_transformation_from_file
+from fuzzyflow.verification.sampling import SamplingStrategy
 from fuzzyflow.verification.verifier import TransformationVerifier
 
 
@@ -31,6 +33,31 @@ def main():
         required=True
     )
 
+    parser.add_argument(
+        '-r',
+        '--runs',
+        type=int,
+        help='<number of validation runs to perform>',
+        default=200
+    )
+
+    parser.add_argument(
+        '-c',
+        '--cutout-strategy',
+        type=cutout.CutoutStrategy,
+        choices=list(cutout.CutoutStrategy),
+        help='Strategy to use for selecting subgraph cutouts',
+        default=cutout.CutoutStrategy.SIMPLE
+    )
+    parser.add_argument(
+        '-s',
+        '--sampling-strategy',
+        type=SamplingStrategy,
+        choices=list(SamplingStrategy),
+        help='Strategy to use for sampling testing data',
+        default=SamplingStrategy.SIMPLE_UNIFORM
+    )
+
     args = parser.parse_args()
 
     # Check if both the SDFG file and transformation file exist.
@@ -52,15 +79,10 @@ def main():
     if xform is None or target_sdfg is None:
         print('Failed to load transformation')
         exit(1)
-    if xform.state_id < 0:
-        raise NotImplementedError(
-            'Processing multi-state transformations is currently not possible'
-        )
 
     verifier = TransformationVerifier(xform, sdfg, cutout.CutoutStrategy.SIMPLE)
 
-    n_verification_samples = 10
-    valid = verifier.verify(n_verification_samples)
+    valid = verifier.verify(args.runs, status=True)
 
     print('Transformation is valid' if valid else 'INVALID Transformation!')
 

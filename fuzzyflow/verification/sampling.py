@@ -2,24 +2,31 @@
 # This file is part of FuzzyFlow, which is released under the BSD 3-Clause
 # License. For details, see the LICENSE file.
 
-from enum import Flag
 import random
-from typing import Dict, List, Set, Tuple
-from dace.sdfg import SDFG, nodes as nd
-from dace.data import Data
-from dace.symbolic import symbol
+from enum import Enum
+from typing import Dict, List, Set, Tuple, Union
+
 import numpy as np
+from dace import dtypes as ddtypes
+from dace.data import Data, Scalar
+from dace.sdfg import SDFG
+from dace.sdfg import nodes as nd
+from dace.symbolic import symbol
 from sympy.core import Expr
 from sympy.core.numbers import Number
 
 
-class SamplingStrategy(Flag):
-    SIMPLE_UNIFORM = 0
+class SamplingStrategy(Enum):
+    SIMPLE_UNIFORM = 'SIMPLE_UNIFORM'
+
+    def __str__(self):
+        return self.value
 
 
 class DataSampler:
 
     strategy: SamplingStrategy = None
+    random_generator: np.random.Generator = None
 
     def __init__(
         self,
@@ -30,6 +37,40 @@ class DataSampler:
         if seed is not None:
             np.random.seed(seed)
             random.seed(seed)
+        self.random_generator = np.random.default_rng(seed)
+
+
+    def _uniform_samling(
+        self, name: str, array: Data, shape: Union[List, Tuple]
+    ) -> Union[np.ndarray, np.number]:
+        npdt = array.dtype.as_numpy_dtype()
+        if npdt in [np.float16, np.float32, np.float64]:
+            bound = np.finfo(npdt).max
+            if isinstance(array, Scalar):
+                return self.random_generator.uniform(0.0, bound)
+            else:
+                return self.random_generator.uniform(0.0, bound, shape)
+        elif npdt in [
+            np.int8, np.int16, np.int32, np.int64,
+            np.uint8, np.uint16, np.uint32, np.uint64
+        ]:
+            if isinstance(array, Scalar):
+                return np.random.randint(
+                    np.iinfo(npdt).min, np.iinfo(npdt).max
+                )
+            else:
+                return np.random.randint(
+                    np.iinfo(npdt).min, np.iinfo(npdt).max, size=shape
+                )
+        elif array.dtype in [ddtypes.bool, ddtypes.bool_]:
+            if isinstance(array, Scalar):
+                return np.random.randint(low=0, high=2)
+            else:
+                return np.random.randint(low=0, high=2, size=shape)
+        if isinstance(array, Scalar):
+            return np.random.rand()
+        else:
+            return np.random.rand(*shape)
 
 
     def _sample_data_for_nodes(
@@ -64,9 +105,15 @@ class DataSampler:
                 else:
                     shape.append(x)
             if sample:
-                retdict[name] = np.random.rand(*shape)
+                if self.strategy == SamplingStrategy.SIMPLE_UNIFORM:
+                    retdict[name] = self._uniform_samling(name, array, shape)
+                else:
+                    raise NotImplementedError()
             else:
-                retdict[name] = np.zeros(shape)
+                if isinstance(array, Scalar):
+                    retdict[name] = 0
+                else:
+                    retdict[name] = np.zeros(shape)
 
         return retdict
 

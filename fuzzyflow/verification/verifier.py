@@ -3,10 +3,15 @@
 # License. For details, see the LICENSE file.
 
 from copy import deepcopy
-from dace.sdfg import SDFG, nodes as nd
-from dace.codegen.compiled_sdfg import CompiledSDFG
-from dace.transformation.transformation import SubgraphTransformation, PatternTransformation
 from typing import List, Union
+import numpy as np
+
+from alive_progress import alive_bar
+from dace.codegen.compiled_sdfg import CompiledSDFG
+from dace.sdfg import SDFG
+from dace.sdfg import nodes as nd
+from dace.transformation.transformation import (PatternTransformation,
+                                                SubgraphTransformation)
 
 from fuzzyflow.cutout import CutoutStrategy, find_cutout_for_transformation
 from fuzzyflow.util import apply_transformation
@@ -35,14 +40,17 @@ class TransformationVerifier:
         self.sampling_strategy = sampling_strategy
 
 
-    def cutout(self, strategy: CutoutStrategy = None) -> SDFG:
+    def cutout(
+        self, strategy: CutoutStrategy = None, status: bool = False
+    ) -> SDFG:
         recut = False
         if strategy is not None and strategy != self.cutout_strategy:
             self.cutout_strategy = strategy
             recut = True
 
         if self._cutout is None or recut:
-            print('Finding ideal cutout')
+            if status:
+                print('Finding ideal cutout')
             self._cutout = find_cutout_for_transformation(
                 self.sdfg, self.xform, self.cutout_strategy
             )
@@ -53,50 +61,79 @@ class TransformationVerifier:
             out_nodes: List[nd.AccessNode] = self._cutout.output_arrays()
             for out_node in out_nodes:
                 self._cutout.arrays[out_node.data].transient = False
-            print('Cutout obtained')
+            if status:
+                print('Cutout obtained')
 
         return self._cutout
 
 
-    def verify(self, n_samples: int = 1) -> bool:
-        cutout = self.cutout()
+    def verify(self, n_samples: int = 1, status: bool = False) -> bool:
+        cutout = self.cutout(status=status)
         original_cutout = deepcopy(cutout)
-        print('Applying transformation')
+        if status:
+            print('Applying transformation')
         apply_transformation(cutout, self.xform)
 
-        print('Compiling pre-transformation cutout')
+        if status:
+            print('Compiling pre-transformation cutout')
         prog_orig: CompiledSDFG = original_cutout.compile()
-        print('Compiling post-transformation cutout')
+        if status:
+            print('Compiling post-transformation cutout')
         prog_xformed: CompiledSDFG = cutout.compile()
-        print(
-            'Sampling data over', n_samples,
-            'run' + ('s' if n_samples > 1 else '')
-        )
+        if status:
+            print(
+                'Verifying transformation over', n_samples,
+                'sampling run' + ('s' if n_samples > 1 else '')
+            )
 
         seed = 12121
         sampler = DataSampler(self.sampling_strategy, seed)
 
-        for i in range(n_samples):
-            symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
-                original_cutout
-            )
-            inputs = sampler.sample_inputs_for(original_cutout, symbols_map)
-            out_orig = sampler.generate_output_containers_for(
-                original_cutout, symbols_map
-            )
-            out_xformed = sampler.generate_output_containers_for(
-                original_cutout, symbols_map
-            )
+        with alive_bar(n_samples, disable=(not status)) as bar:
+            for _ in range(n_samples):
+                symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
+                    original_cutout
+                )
+                inputs = sampler.sample_inputs_for(original_cutout, symbols_map)
+                out_orig = sampler.generate_output_containers_for(
+                    original_cutout, symbols_map
+                )
+                out_xformed = sampler.generate_output_containers_for(
+                    original_cutout, symbols_map
+                )
 
-            prog_orig.__call__(**inputs, **out_orig, **free_symbols_map)
-            prog_xformed.__call__(**inputs, **out_xformed, **free_symbols_map)
+                orig_containers = dict()
+                for k in inputs.keys():
+                    if not k in orig_containers:
+                        orig_containers[k] = inputs[k]
+                for k in out_orig.keys():
+                    if not k in orig_containers:
+                        orig_containers[k] = out_orig[k]
+                prog_orig.__call__(
+                    **orig_containers, **free_symbols_map
+                )
 
-            for k in out_orig.keys():
-                oval = out_orig[k]
-                nval = out_xformed[k]
-                if (oval != nval).any():
-                    return False
+                xformed_containers = dict()
+                for k in inputs.keys():
+                    if not k in xformed_containers:
+                        xformed_containers[k] = inputs[k]
+                for k in out_xformed.keys():
+                    if not k in xformed_containers:
+                        xformed_containers[k] = out_xformed[k]
+                prog_xformed.__call__(
+                    **xformed_containers, **free_symbols_map
+                )
 
-            print('Run', i + 1, 'of', n_samples, 'successful')
+                for k in orig_containers.keys():
+                    oval = orig_containers[k]
+                    nval = xformed_containers[k]
+                    if isinstance(oval, np.ndarray):
+                        if (oval != nval).any():
+                            return False
+                    else:
+                        if oval != nval:
+                            return False
+
+                bar()
 
         return True

@@ -1,0 +1,1 @@
+{"_subgraph":{"0":15,"1":7,"2":16},"expr_index":0,"sdfg_id":0,"state_id":0,"transformation":"OTFMapFusion","type":"PatternTransformation","docstring":" Performs fusion of two maps by replicating the contents of the first into the second map\n        until all the input dependencies (memlets) of the second one are met.\n    "}

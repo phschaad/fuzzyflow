@@ -2,45 +2,43 @@
 # This file is part of FuzzyFlow, which is released under the BSD 3-Clause
 # License. For details, see the LICENSE file.
 
-from enum import Flag
-from typing import Set, Union
+from enum import Enum
+from typing import Dict, Set, Union
+
+from dace.sdfg import SDFG, ScopeSubgraphView
+from dace.sdfg import nodes as nd
 from dace.sdfg.analysis import cutout as dcut
-from dace.sdfg import SDFG, nodes as nd, ScopeSubgraphView
-from dace.transformation.transformation import SubgraphTransformation, PatternTransformation
+from dace.transformation.transformation import (PatternTransformation,
+                                                SubgraphTransformation)
 
 from fuzzyflow import util
 
 
-class CutoutStrategy(Flag):
-    SIMPLE = 0
+class CutoutStrategy(Enum):
+    SIMPLE = 'SIMPLE'
+    MINIMUM_DOMINATOR_FLOW = 'MINIMUM_DOMINATOR_FLOW'
+
+    def __str__(self):
+        return self.value
+
+
+def _minimum_dominator_flow_cutout(
+    sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
+) -> SDFG:
+    affected_nodes = util.transformation_get_affected_nodes(sdfg, xform)
 
 
 def _minimal_transformation_cutout(
     sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
 ) -> SDFG:
-    state = sdfg.node(xform.state_id)
-
     affected_nodes = util.transformation_get_affected_nodes(sdfg, xform)
-    cutout_nodes: Set[nd.Node] = set()
-    for node in affected_nodes:
-        cutout_nodes.add(node)
-        if isinstance(node, nd.EntryNode):
-            scope: ScopeSubgraphView = state.scope_subgraph(
-                node, include_entry=True, include_exit=True
-            )
-            for n in scope.nodes():
-                cutout_nodes.add(n)
-        elif isinstance(node, nd.ExitNode):
-            entry = state.entry_node(node)
-            scope: ScopeSubgraphView = state.scope_subgraph(
-                entry, include_entry=True, include_exit=True
-            )
-            for n in scope.nodes():
-                cutout_nodes.add(n)
-
-    ct: SDFG = dcut.cutout_state(state, *cutout_nodes, make_copy=False)
-
-    util.translate_transformation(xform, state, sdfg, ct, affected_nodes)
+    state = sdfg.node(xform.state_id)
+    translation_dict: Dict[nd.Node, nd.Node] = dict()
+    ct: SDFG = dcut.cutout_state(
+        state, *affected_nodes, make_copy=True,
+        inserted_nodes=translation_dict
+    )
+    util.translate_transformation(xform, state, ct, translation_dict)
 
     return ct
 
@@ -51,4 +49,6 @@ def find_cutout_for_transformation(
 ) -> SDFG:
     if strategy == CutoutStrategy.SIMPLE:
         return _minimal_transformation_cutout(sdfg, xform)
+    elif strategy == CutoutStrategy.MINIMUM_DOMINATOR_FLOW:
+        return _minimum_dominator_flow_cutout(sdfg, xform)
     raise Exception('Unknown cutout strategy')

@@ -1,0 +1,1 @@
+{"_subgraph":{"0":0,"1":2,"2":1},"expr_index":0,"sdfg_id":0,"state_id":3,"transformation":"TrivialTaskletElimination","type":"PatternTransformation","docstring":" Implements the Trivial-Tasklet Elimination pattern.\n\n        Trivial-Tasklet Elimination removes tasklets that just copy the input\n        to the output without WCR.\n    "}
