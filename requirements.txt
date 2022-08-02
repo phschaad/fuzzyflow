@@ -1,1 +1,2 @@
 dace>=0.13.3
+alive_bar

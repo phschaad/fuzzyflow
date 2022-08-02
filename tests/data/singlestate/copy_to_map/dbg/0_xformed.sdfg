@@ -1,0 +1,911 @@
+{
+  "type": "SDFG",
+  "attributes": {
+    "arg_names": [],
+    "constants_prop": {},
+    "_arrays": {
+      "__tmp8": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "B*SM",
+            "SM",
+            "1"
+          ],
+          "total_size": "B*H*SM",
+          "offset": [
+            "0",
+            "0",
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "dtype": "float32",
+          "shape": [
+            "H",
+            "B",
+            "SM"
+          ],
+          "transient": false,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      },
+      "tmp_max": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "B*SM",
+            "SM",
+            "1",
+            "1"
+          ],
+          "total_size": "B*H*SM",
+          "offset": [
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "dtype": "float32",
+          "shape": [
+            "H",
+            "B",
+            "SM",
+            "1"
+          ],
+          "transient": false,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      }
+    },
+    "symbols": {
+      "B": "int32",
+      "H": "int32",
+      "SM": "int32"
+    },
+    "instrument": "No_Instrumentation",
+    "global_code": {
+      "frame": {
+        "string_data": "",
+        "language": "CPP"
+      }
+    },
+    "init_code": {
+      "frame": {
+        "string_data": "",
+        "language": "CPP"
+      }
+    },
+    "exit_code": {
+      "frame": {
+        "string_data": "",
+        "language": "CPP"
+      }
+    },
+    "orig_sdfg": {
+      "type": "SDFG",
+      "attributes": {
+        "arg_names": [],
+        "constants_prop": {},
+        "_arrays": {
+          "__tmp8": {
+            "type": "Array",
+            "attributes": {
+              "allow_conflicts": false,
+              "strides": [
+                "B*SM",
+                "SM",
+                "1"
+              ],
+              "total_size": "B*H*SM",
+              "offset": [
+                "0",
+                "0",
+                "0"
+              ],
+              "may_alias": false,
+              "alignment": 0,
+              "start_offset": 0,
+              "optional": false,
+              "dtype": "float32",
+              "shape": [
+                "H",
+                "B",
+                "SM"
+              ],
+              "transient": false,
+              "storage": "Default",
+              "lifetime": "Scope",
+              "location": {},
+              "debuginfo": null
+            }
+          },
+          "tmp_max": {
+            "type": "Array",
+            "attributes": {
+              "allow_conflicts": false,
+              "strides": [
+                "B*SM",
+                "SM",
+                "1",
+                "1"
+              ],
+              "total_size": "B*H*SM",
+              "offset": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "may_alias": false,
+              "alignment": 0,
+              "start_offset": 0,
+              "optional": false,
+              "dtype": "float32",
+              "shape": [
+                "H",
+                "B",
+                "SM",
+                "1"
+              ],
+              "transient": false,
+              "storage": "Default",
+              "lifetime": "Scope",
+              "location": {},
+              "debuginfo": null
+            }
+          }
+        },
+        "symbols": {
+          "B": "int32",
+          "H": "int32",
+          "SM": "int32"
+        },
+        "instrument": "No_Instrumentation",
+        "global_code": {
+          "frame": {
+            "string_data": "",
+            "language": "CPP"
+          }
+        },
+        "init_code": {
+          "frame": {
+            "string_data": "",
+            "language": "CPP"
+          }
+        },
+        "exit_code": {
+          "frame": {
+            "string_data": "",
+            "language": "CPP"
+          }
+        },
+        "orig_sdfg": null,
+        "transformation_hist": [],
+        "logical_groups": [],
+        "openmp_sections": true,
+        "debuginfo": {
+          "type": "DebugInfo",
+          "start_line": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "end_column": 0,
+          "filename": null
+        },
+        "_pgrids": {},
+        "_subarrays": {},
+        "_rdistrarrays": {},
+        "callback_mapping": {},
+        "name": "encoder_cutout"
+      },
+      "nodes": [
+        {
+          "type": "SDFGState",
+          "label": "call_mha_forward_160",
+          "id": 0,
+          "collapsed": false,
+          "scope_dict": {
+            "-1": [
+              0,
+              1
+            ]
+          },
+          "nodes": [
+            {
+              "type": "AccessNode",
+              "label": "__tmp8",
+              "attributes": {
+                "setzero": false,
+                "debuginfo": {
+                  "type": "DebugInfo",
+                  "start_line": 108,
+                  "end_line": 108,
+                  "start_column": 68,
+                  "end_column": 68,
+                  "filename": "substation/transformer_sdfg.py"
+                },
+                "data": "__tmp8",
+                "instrument": "No_Instrumentation",
+                "in_connectors": {},
+                "out_connectors": {}
+              },
+              "id": 0,
+              "scope_entry": null,
+              "scope_exit": null
+            },
+            {
+              "type": "AccessNode",
+              "label": "tmp_max",
+              "attributes": {
+                "setzero": false,
+                "debuginfo": {
+                  "type": "DebugInfo",
+                  "start_line": 108,
+                  "end_line": 108,
+                  "start_column": 68,
+                  "end_column": 68,
+                  "filename": "substation/transformer_sdfg.py"
+                },
+                "data": "tmp_max",
+                "instrument": "No_Instrumentation",
+                "in_connectors": {},
+                "out_connectors": {}
+              },
+              "id": 1,
+              "scope_entry": null,
+              "scope_exit": null
+            }
+          ],
+          "edges": [
+            {
+              "type": "MultiConnectorEdge",
+              "attributes": {
+                "data": {
+                  "type": "Memlet",
+                  "attributes": {
+                    "volume": "B*H*SM",
+                    "dynamic": false,
+                    "subset": {
+                      "type": "Range",
+                      "ranges": [
+                        {
+                          "start": "0",
+                          "end": "H - 1",
+                          "step": "1",
+                          "tile": "1"
+                        },
+                        {
+                          "start": "0",
+                          "end": "B - 1",
+                          "step": "1",
+                          "tile": "1"
+                        },
+                        {
+                          "start": "0",
+                          "end": "SM - 1",
+                          "step": "1",
+                          "tile": "1"
+                        },
+                        {
+                          "start": "0",
+                          "end": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ]
+                    },
+                    "other_subset": null,
+                    "data": "tmp_max",
+                    "wcr": null,
+                    "debuginfo": null,
+                    "wcr_nonatomic": false,
+                    "allow_oob": false,
+                    "src_subset": null,
+                    "dst_subset": {
+                      "type": "Range",
+                      "ranges": [
+                        {
+                          "start": "0",
+                          "end": "H - 1",
+                          "step": "1",
+                          "tile": "1"
+                        },
+                        {
+                          "start": "0",
+                          "end": "B - 1",
+                          "step": "1",
+                          "tile": "1"
+                        },
+                        {
+                          "start": "0",
+                          "end": "SM - 1",
+                          "step": "1",
+                          "tile": "1"
+                        },
+                        {
+                          "start": "0",
+                          "end": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ]
+                    },
+                    "num_accesses": "B*H*SM"
+                  }
+                }
+              },
+              "src": "0",
+              "dst": "1",
+              "dst_connector": null,
+              "src_connector": null
+            }
+          ],
+          "attributes": {
+            "is_collapsed": false,
+            "nosync": false,
+            "instrument": "No_Instrumentation",
+            "executions": "0",
+            "dynamic_executions": true,
+            "ranges": {},
+            "location": {}
+          }
+        }
+      ],
+      "edges": [],
+      "sdfg_list_id": 0,
+      "start_state": 0,
+      "dace_version": "0.13.3"
+    },
+    "transformation_hist": [
+      {
+        "type": "PatternTransformation",
+        "transformation": "CopyToMap",
+        "sdfg_id": 0,
+        "state_id": 0,
+        "_subgraph": {
+          "0": 128,
+          "1": 129
+        },
+        "expr_index": 0
+      }
+    ],
+    "logical_groups": [],
+    "openmp_sections": true,
+    "debuginfo": {
+      "type": "DebugInfo",
+      "start_line": 0,
+      "end_line": 0,
+      "start_column": 0,
+      "end_column": 0,
+      "filename": null
+    },
+    "_pgrids": {},
+    "_subarrays": {},
+    "_rdistrarrays": {},
+    "callback_mapping": {},
+    "name": "encoder_cutout",
+    "hash": "21ece8e15ad4839d15e8b9d2c0dc2319a2395f1a88a9072b056b380a41b1fab6"
+  },
+  "nodes": [
+    {
+      "type": "SDFGState",
+      "label": "call_mha_forward_160",
+      "id": 0,
+      "collapsed": false,
+      "scope_dict": {
+        "-1": [
+          0,
+          1,
+          2
+        ],
+        "2": [
+          3,
+          4
+        ]
+      },
+      "nodes": [
+        {
+          "type": "AccessNode",
+          "label": "__tmp8",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 108,
+              "end_line": 108,
+              "start_column": 68,
+              "end_column": 68,
+              "filename": "substation/transformer_sdfg.py"
+            },
+            "data": "__tmp8",
+            "instrument": "No_Instrumentation",
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 0,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "AccessNode",
+          "label": "tmp_max",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 108,
+              "end_line": 108,
+              "start_column": 68,
+              "end_column": 68,
+              "filename": "substation/transformer_sdfg.py"
+            },
+            "data": "tmp_max",
+            "instrument": "No_Instrumentation",
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 1,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "MapEntry",
+          "label": "copy_map[__i0=0:H, __i1=0:B, __i2=0:SM, __i3=0]",
+          "attributes": {
+            "label": "copy_map",
+            "params": [
+              "__i0",
+              "__i1",
+              "__i2",
+              "__i3"
+            ],
+            "range": {
+              "type": "Range",
+              "ranges": [
+                {
+                  "start": "0",
+                  "end": "H - 1",
+                  "step": "1",
+                  "tile": "1"
+                },
+                {
+                  "start": "0",
+                  "end": "B - 1",
+                  "step": "1",
+                  "tile": "1"
+                },
+                {
+                  "start": "0",
+                  "end": "SM - 1",
+                  "step": "1",
+                  "tile": "1"
+                },
+                {
+                  "start": "0",
+                  "end": "0",
+                  "step": "1",
+                  "tile": "1"
+                }
+              ]
+            },
+            "schedule": "Default",
+            "unroll": false,
+            "collapse": 1,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 104,
+              "end_line": 104,
+              "start_column": 0,
+              "end_column": 0,
+              "filename": "/mnt/d/UserData/Documents/ETH/SPCL/DaCe/dace/transformation/dataflow/copy_to_map.py"
+            },
+            "is_collapsed": false,
+            "instrument": "No_Instrumentation",
+            "in_connectors": {
+              "IN___tmp8": null
+            },
+            "out_connectors": {
+              "OUT___tmp8": null
+            }
+          },
+          "id": 2,
+          "scope_entry": null,
+          "scope_exit": "4"
+        },
+        {
+          "type": "Tasklet",
+          "label": "copy",
+          "attributes": {
+            "code": {
+              "string_data": "__out = __inp",
+              "language": "Python"
+            },
+            "state_fields": [],
+            "code_global": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_init": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_exit": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 104,
+              "end_line": 104,
+              "start_column": 0,
+              "end_column": 0,
+              "filename": "/mnt/d/UserData/Documents/ETH/SPCL/DaCe/dace/transformation/dataflow/copy_to_map.py"
+            },
+            "instrument": "No_Instrumentation",
+            "side_effects": null,
+            "label": "copy",
+            "location": {},
+            "environments": [],
+            "in_connectors": {
+              "__inp": "float32"
+            },
+            "out_connectors": {
+              "__out": "float32"
+            }
+          },
+          "id": 3,
+          "scope_entry": "2",
+          "scope_exit": "4"
+        },
+        {
+          "type": "MapExit",
+          "label": "copy_map[__i0=0:H, __i1=0:B, __i2=0:SM, __i3=0]",
+          "attributes": {
+            "in_connectors": {
+              "IN_tmp_max": null
+            },
+            "out_connectors": {
+              "OUT_tmp_max": null
+            }
+          },
+          "id": 4,
+          "scope_entry": "2",
+          "scope_exit": "4"
+        }
+      ],
+      "edges": [
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "B*H*SM",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "Mod((B*SM*(H - 1) + SM*(B - 1) + SM - 1)/(B*SM), H)",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "Mod((B*SM*(H - 1) + SM*(B - 1) + SM - 1)/SM, B)",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "Mod(-1, SM)",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "__tmp8",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "Mod((B*SM*(H - 1) + SM*(B - 1) + SM - 1)/(B*SM), H)",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "Mod((B*SM*(H - 1) + SM*(B - 1) + SM - 1)/SM, B)",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "Mod(-1, SM)",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "num_accesses": "B*H*SM"
+              }
+            }
+          },
+          "src": "0",
+          "dst": "2",
+          "dst_connector": "IN___tmp8",
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "Mod((B*SM*__i0 + SM*__i1 + __i2 + __i3)/(B*SM), H)",
+                      "end": "Mod((B*SM*__i0 + SM*__i1 + __i2 + __i3)/(B*SM), H)",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "Mod((B*SM*__i0 + SM*__i1 + __i2 + __i3)/SM, B)",
+                      "end": "Mod((B*SM*__i0 + SM*__i1 + __i2 + __i3)/SM, B)",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "Mod(__i2 + __i3, SM)",
+                      "end": "Mod(__i2 + __i3, SM)",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "__tmp8",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "Mod((B*SM*__i0 + SM*__i1 + __i2 + __i3)/(B*SM), H)",
+                      "end": "Mod((B*SM*__i0 + SM*__i1 + __i2 + __i3)/(B*SM), H)",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "Mod((B*SM*__i0 + SM*__i1 + __i2 + __i3)/SM, B)",
+                      "end": "Mod((B*SM*__i0 + SM*__i1 + __i2 + __i3)/SM, B)",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "Mod(__i2 + __i3, SM)",
+                      "end": "Mod(__i2 + __i3, SM)",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "2",
+          "dst": "3",
+          "dst_connector": "__inp",
+          "src_connector": "OUT___tmp8"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "B*H*SM",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "H - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "B - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "SM - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "tmp_max",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "H - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "B - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "SM - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "num_accesses": "B*H*SM"
+              }
+            }
+          },
+          "src": "4",
+          "dst": "1",
+          "dst_connector": null,
+          "src_connector": "OUT_tmp_max"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i2",
+                      "end": "__i2",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i3",
+                      "end": "__i3",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "tmp_max",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i2",
+                      "end": "__i2",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i3",
+                      "end": "__i3",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "3",
+          "dst": "4",
+          "dst_connector": "IN_tmp_max",
+          "src_connector": "__out"
+        }
+      ],
+      "attributes": {
+        "is_collapsed": false,
+        "nosync": false,
+        "instrument": "No_Instrumentation",
+        "executions": "1",
+        "dynamic_executions": false,
+        "ranges": {},
+        "location": {}
+      }
+    }
+  ],
+  "edges": [],
+  "sdfg_list_id": 0,
+  "start_state": 0,
+  "dace_version": "0.13.3"
+}

@@ -1,0 +1,1 @@
+{"_subgraph":{"0":95,"1":152},"array":null,"create_array":true,"expr_index":0,"prefix":"trans_","sdfg_id":0,"state_id":0,"transformation":"OutLocalStorage","type":"PatternTransformation","docstring":" Implements the OutLocalStorage transformation, which adds a transient\n        data node between two scope exit nodes.\n    "}

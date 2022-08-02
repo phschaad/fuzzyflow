@@ -1,0 +1,1 @@
+{"_subgraph":{"0":49},"expr_index":0,"sdfg_id":0,"state_id":0,"transformation":"ElementWiseArrayOperation2D","type":"PatternTransformation","docstring":" Distributes element-wise array operations.\n    "}

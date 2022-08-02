@@ -1,0 +1,1 @@
+{"_subgraph":{"0":128,"1":129},"expr_index":0,"sdfg_id":0,"state_id":0,"transformation":"CopyToMap","type":"PatternTransformation","docstring":"\n    Converts an access node -> access node copy into a map. Useful for generating manual code and\n    controlling schedules for N-dimensional strided copies.\n    "}

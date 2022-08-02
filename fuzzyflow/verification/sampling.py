@@ -26,7 +26,7 @@ class SamplingStrategy(Enum):
 class DataSampler:
 
     strategy: SamplingStrategy = None
-    random_generator: np.random.Generator = None
+    random_state: np.random.RandomState = None
 
     def __init__(
         self,
@@ -37,7 +37,7 @@ class DataSampler:
         if seed is not None:
             np.random.seed(seed)
             random.seed(seed)
-        self.random_generator = np.random.default_rng(seed)
+        self.random_state = np.random.RandomState(seed)
 
 
     def _uniform_samling(
@@ -45,11 +45,23 @@ class DataSampler:
     ) -> Union[np.ndarray, np.number]:
         npdt = array.dtype.as_numpy_dtype()
         if npdt in [np.float16, np.float32, np.float64]:
-            bound = np.finfo(npdt).max
+            # TODO: We can't sample directly over [float64.min, float64.max],
+            # because `np.uniform` would complain about an overflow. We need to
+            # find an alternative way of ensuring the entire float64 spectrum
+            # is covered and sampled.
+            if npdt == np.float64:
+                npdt = np.float32
             if isinstance(array, Scalar):
-                return self.random_generator.uniform(0.0, bound)
+                return self.random_state.uniform(
+                    low=np.finfo(npdt).min,
+                    high=np.finfo(npdt).max
+                )
             else:
-                return self.random_generator.uniform(0.0, bound, shape)
+                return self.random_state.uniform(
+                    low=np.finfo(npdt).min,
+                    high=np.finfo(npdt).max,
+                    size=shape
+                )
         elif npdt in [
             np.int8, np.int16, np.int32, np.int64,
             np.uint8, np.uint16, np.uint32, np.uint64

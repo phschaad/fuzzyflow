@@ -259,62 +259,7 @@
       "coeff"
     ],
     "callback_mapping": {},
-    "constants_prop": {
-      "I": [
-        {
-          "attributes": {
-            "allow_conflicts": false,
-            "debuginfo": null,
-            "dtype": "int64",
-            "lifetime": "Scope",
-            "location": {},
-            "shape": [
-              "1"
-            ],
-            "storage": "Default",
-            "transient": false
-          },
-          "type": "Scalar"
-        },
-        8
-      ],
-      "J": [
-        {
-          "attributes": {
-            "allow_conflicts": false,
-            "debuginfo": null,
-            "dtype": "int64",
-            "lifetime": "Scope",
-            "location": {},
-            "shape": [
-              "1"
-            ],
-            "storage": "Default",
-            "transient": false
-          },
-          "type": "Scalar"
-        },
-        8
-      ],
-      "K": [
-        {
-          "attributes": {
-            "allow_conflicts": false,
-            "debuginfo": null,
-            "dtype": "int64",
-            "lifetime": "Scope",
-            "location": {},
-            "shape": [
-              "1"
-            ],
-            "storage": "Default",
-            "transient": false
-          },
-          "type": "Scalar"
-        },
-        5
-      ]
-    },
+	"constants_prop": {},
     "debuginfo": {
       "end_column": 0,
       "end_line": 54,

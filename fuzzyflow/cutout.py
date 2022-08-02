@@ -3,12 +3,14 @@
 # License. For details, see the LICENSE file.
 
 from enum import Enum
-from typing import Dict, Set, Union
+from typing import Dict, Optional, Union
 
-from dace.sdfg import SDFG, ScopeSubgraphView
+from dace.sdfg import SDFG
 from dace.sdfg import nodes as nd
 from dace.sdfg.analysis import cutout as dcut
 from dace.transformation.transformation import (PatternTransformation,
+                                                SingleStateTransformation,
+                                                MultiStateTransformation,
                                                 SubgraphTransformation)
 
 from fuzzyflow import util
@@ -30,17 +32,23 @@ def _minimum_dominator_flow_cutout(
 
 def _minimal_transformation_cutout(
     sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
-) -> SDFG:
+) -> Optional[SDFG]:
     affected_nodes = util.transformation_get_affected_nodes(sdfg, xform)
-    state = sdfg.node(xform.state_id)
-    translation_dict: Dict[nd.Node, nd.Node] = dict()
-    ct: SDFG = dcut.cutout_state(
-        state, *affected_nodes, make_copy=True,
-        inserted_nodes=translation_dict
-    )
-    util.translate_transformation(xform, state, ct, translation_dict)
+    if (isinstance(xform, SubgraphTransformation) or
+        isinstance(xform, SingleStateTransformation)):
+        state = sdfg.node(xform.state_id)
+        translation_dict: Dict[nd.Node, nd.Node] = dict()
+        ct: SDFG = dcut.cutout_state(
+            state, *affected_nodes, make_copy=True,
+            inserted_nodes=translation_dict
+        )
+        util.translate_transformation(xform, state, ct, translation_dict)
 
-    return ct
+        return ct
+    elif isinstance(xform, MultiStateTransformation):
+        return None
+
+    return None
 
 
 def find_cutout_for_transformation(

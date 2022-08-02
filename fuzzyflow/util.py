@@ -30,10 +30,6 @@ def transformation_get_affected_nodes(
         if isinstance(sgv, StateSubgraphView):
             for n in sgv.nodes():
                 affected_nodes.add(n)
-        else:
-            raise NotImplementedError(
-                'Multi-state subgraph transformations are not available yet'
-            )
 
     if strict:
         return affected_nodes

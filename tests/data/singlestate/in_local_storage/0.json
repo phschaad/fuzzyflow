@@ -1,0 +1,1 @@
+{"_subgraph":{"0":151,"1":93},"array":null,"create_array":true,"expr_index":0,"prefix":"trans_","sdfg_id":0,"state_id":0,"transformation":"InLocalStorage","type":"PatternTransformation","docstring":" Implements the InLocalStorage transformation, which adds a transient\n        data node between two scope entry nodes.\n    "}

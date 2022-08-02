@@ -67,12 +67,19 @@ class TransformationVerifier:
         return self._cutout
 
 
-    def verify(self, n_samples: int = 1, status: bool = False) -> bool:
+    def verify(
+        self, n_samples: int = 1, status: bool = False,
+        debug_save_path: str = None
+    ) -> bool:
         cutout = self.cutout(status=status)
         original_cutout = deepcopy(cutout)
         if status:
             print('Applying transformation')
         apply_transformation(cutout, self.xform)
+
+        if debug_save_path is not None:
+            original_cutout.save(debug_save_path + '_orig.sdfg')
+            cutout.save(debug_save_path + '_xformed.sdfg')
 
         if status:
             print('Compiling pre-transformation cutout')
@@ -90,7 +97,10 @@ class TransformationVerifier:
         sampler = DataSampler(self.sampling_strategy, seed)
 
         with alive_bar(n_samples, disable=(not status)) as bar:
-            for _ in range(n_samples):
+            i = 0
+            resample_attempt = 0
+            while i < n_samples:
+            #for _ in range(n_samples):
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                     original_cutout
                 )
@@ -99,7 +109,7 @@ class TransformationVerifier:
                     original_cutout, symbols_map
                 )
                 out_xformed = sampler.generate_output_containers_for(
-                    original_cutout, symbols_map
+                    cutout, symbols_map
                 )
 
                 orig_containers = dict()
@@ -124,16 +134,28 @@ class TransformationVerifier:
                     **xformed_containers, **free_symbols_map
                 )
 
+                resample = False
                 for k in orig_containers.keys():
+                    # Skip any containers that don't exist in the new cutout
+                    # TODO: This is probably not how we should do it...
+                    if k not in xformed_containers:
+                        continue
                     oval = orig_containers[k]
                     nval = xformed_containers[k]
                     if isinstance(oval, np.ndarray):
-                        if (oval != nval).any():
+                        if not np.allclose(oval, nval, equal_nan=True):
                             return False
                     else:
-                        if oval != nval:
+                        if not np.allclose([oval], [nval], equal_nan=True):
                             return False
 
-                bar()
+                if not resample or resample_attempt >= 10:
+                    resample_attempt = 0
+                    bar()
+                    i += 1
+                elif resample_attempt < 10:
+                    print('Resampling for i', i)
+                    print('Attempt', resample_attempt + 1)
+                    resample_attempt += 1
 
         return True
