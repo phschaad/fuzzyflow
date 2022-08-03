@@ -1650,7 +1650,7 @@
     "_rdistrarrays": {},
     "callback_mapping": {},
     "name": "encoder_cutout",
-    "hash": "88197c5360a2e2a587fbe448378829e8e4bd6a978186ff9a0cb2fdf16b8604b0"
+    "hash": "7a30a9bb802367c58de880896f2418510bcac8b6480f37dc11c18d87577c42c8"
   },
   "nodes": [
     {
@@ -2018,7 +2018,7 @@
               "end_line": 733,
               "start_column": 0,
               "end_column": 0,
-              "filename": "/mnt/d/UserData/Documents/ETH/SPCL/DaCe/dace/transformation/dataflow/streaming_memory.py"
+              "filename": "D:\\UserData\\Documents\\ETH\\SPCL\\DaCe\\dace\\transformation\\dataflow\\streaming_memory.py"
             },
             "data": "stream_dropout_ret_0",
             "instrument": "No_Instrumentation",
@@ -2040,7 +2040,7 @@
               "end_line": 734,
               "start_column": 0,
               "end_column": 0,
-              "filename": "/mnt/d/UserData/Documents/ETH/SPCL/DaCe/dace/transformation/dataflow/streaming_memory.py"
+              "filename": "D:\\UserData\\Documents\\ETH\\SPCL\\DaCe\\dace\\transformation\\dataflow\\streaming_memory.py"
             },
             "data": "stream_dropout_ret_0",
             "instrument": "No_Instrumentation",

@@ -3,9 +3,10 @@
 # License. For details, see the LICENSE file.
 
 from enum import Enum
-from typing import Dict, Optional, Union
+from typing import Dict, List, Set, Tuple, Union
+import sympy as sp
 
-from dace.sdfg import SDFG
+from dace.sdfg import SDFG, SDFGState
 from dace.sdfg import nodes as nd
 from dace.sdfg.analysis import cutout as dcut
 from dace.transformation.transformation import (PatternTransformation,
@@ -24,15 +25,34 @@ class CutoutStrategy(Enum):
         return self.value
 
 
+def _input_volume_for_nodes(
+    state: SDFGState, nodes: Set[nd.Node]
+) -> Tuple[sp.Expr, List[nd.AccessNode]]:
+    cutout = dcut.cutout_state(state, *nodes)
+    inputs: List[nd.AccessNode] = cutout.input_arrays()
+    indata = [cutout.arrays[n.data] for n in inputs]
+    total_volume = 0
+    for dat in indata:
+        total_volume += dat.total_size
+    return total_volume, inputs
+
+
 def _minimum_dominator_flow_cutout(
     sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
 ) -> SDFG:
     affected_nodes = util.transformation_get_affected_nodes(sdfg, xform)
+    if (isinstance(xform, SubgraphTransformation) or
+        isinstance(xform, SingleStateTransformation)):
+        state = sdfg.node(xform.state_id)
+        base_volume, inputs = _input_volume_for_nodes(state, affected_nodes)
+    elif isinstance(xform, MultiStateTransformation):
+        raise NotImplementedError('Multistate cutouts not yet supported')
+    raise Exception('This type of transformation cannot be supported')
 
 
 def _minimal_transformation_cutout(
     sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
-) -> Optional[SDFG]:
+) -> SDFG:
     affected_nodes = util.transformation_get_affected_nodes(sdfg, xform)
     if (isinstance(xform, SubgraphTransformation) or
         isinstance(xform, SingleStateTransformation)):
@@ -46,9 +66,8 @@ def _minimal_transformation_cutout(
 
         return ct
     elif isinstance(xform, MultiStateTransformation):
-        return None
-
-    return None
+        raise NotImplementedError('Multistate cutouts not yet supported')
+    raise Exception('This type of transformation cannot be supported')
 
 
 def find_cutout_for_transformation(

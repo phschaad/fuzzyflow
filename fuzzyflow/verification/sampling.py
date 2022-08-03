@@ -55,13 +55,13 @@ class DataSampler:
                 return self.random_state.uniform(
                     low=np.finfo(npdt).min,
                     high=np.finfo(npdt).max
-                )
+                ).astype(npdt)
             else:
                 return self.random_state.uniform(
                     low=np.finfo(npdt).min,
                     high=np.finfo(npdt).max,
                     size=shape
-                )
+                ).astype(npdt)
         elif npdt in [
             np.int8, np.int16, np.int32, np.int64,
             np.uint8, np.uint16, np.uint32, np.uint64
@@ -125,7 +125,9 @@ class DataSampler:
                 if isinstance(array, Scalar):
                     retdict[name] = 0
                 else:
-                    retdict[name] = np.zeros(shape)
+                    retdict[name] = np.zeros(shape).astype(
+                        array.dtype.as_numpy_dtype()
+                    )
 
         return retdict
 

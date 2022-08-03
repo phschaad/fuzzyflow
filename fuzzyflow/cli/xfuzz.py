@@ -80,7 +80,9 @@ def main():
         print('Failed to load transformation')
         exit(1)
 
-    verifier = TransformationVerifier(xform, sdfg, cutout.CutoutStrategy.SIMPLE)
+    verifier = TransformationVerifier(
+        xform, sdfg, args.cutout_strategy, args.sampling_strategy
+    )
 
     valid = verifier.verify(args.runs, status=True)
 

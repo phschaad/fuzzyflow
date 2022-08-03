@@ -398,7 +398,7 @@
     "_rdistrarrays": {},
     "callback_mapping": {},
     "name": "encoder_cutout",
-    "hash": "21ece8e15ad4839d15e8b9d2c0dc2319a2395f1a88a9072b056b380a41b1fab6"
+    "hash": "f484adbba1a9122706114915927e69e9162ec15b87fa5424d7f49afe8f432395"
   },
   "nodes": [
     {
@@ -511,7 +511,7 @@
               "end_line": 104,
               "start_column": 0,
               "end_column": 0,
-              "filename": "/mnt/d/UserData/Documents/ETH/SPCL/DaCe/dace/transformation/dataflow/copy_to_map.py"
+              "filename": "D:\\UserData\\Documents\\ETH\\SPCL\\DaCe\\dace\\transformation\\dataflow\\copy_to_map.py"
             },
             "is_collapsed": false,
             "instrument": "No_Instrumentation",
@@ -553,7 +553,7 @@
               "end_line": 104,
               "start_column": 0,
               "end_column": 0,
-              "filename": "/mnt/d/UserData/Documents/ETH/SPCL/DaCe/dace/transformation/dataflow/copy_to_map.py"
+              "filename": "D:\\UserData\\Documents\\ETH\\SPCL\\DaCe\\dace\\transformation\\dataflow\\copy_to_map.py"
             },
             "instrument": "No_Instrumentation",
             "side_effects": null,
