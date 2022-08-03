@@ -6,3 +6,5 @@ _dacegraphs/
 
 !.vscode/fuzzyflow.code-workspace
 
+tests/**/dbg/
+

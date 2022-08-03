@@ -55,7 +55,7 @@ class DataSampler:
                 return self.random_state.uniform(
                     low=np.finfo(npdt).min,
                     high=np.finfo(npdt).max
-                ).astype(npdt)
+                )
             else:
                 return self.random_state.uniform(
                     low=np.finfo(npdt).min,
@@ -73,12 +73,12 @@ class DataSampler:
             else:
                 return np.random.randint(
                     np.iinfo(npdt).min, np.iinfo(npdt).max, size=shape
-                )
+                ).astype(npdt)
         elif array.dtype in [ddtypes.bool, ddtypes.bool_]:
             if isinstance(array, Scalar):
                 return np.random.randint(low=0, high=2)
             else:
-                return np.random.randint(low=0, high=2, size=shape)
+                return np.random.randint(low=0, high=2, size=shape).astype(npdt)
         if isinstance(array, Scalar):
             return np.random.rand()
         else:
