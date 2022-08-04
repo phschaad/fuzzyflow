@@ -49,17 +49,18 @@ class DataSampler:
             # because `np.uniform` would complain about an overflow. We need to
             # find an alternative way of ensuring the entire float64 spectrum
             # is covered and sampled.
+            sample_dtype = npdt
             if npdt == np.float64:
-                npdt = np.float32
+                sample_dtype = np.float32
             if isinstance(array, Scalar):
                 return self.random_state.uniform(
-                    low=np.finfo(npdt).min,
-                    high=np.finfo(npdt).max
+                    low=np.finfo(sample_dtype).min,
+                    high=np.finfo(sample_dtype).max
                 )
             else:
                 return self.random_state.uniform(
-                    low=np.finfo(npdt).min,
-                    high=np.finfo(npdt).max,
+                    low=np.finfo(sample_dtype).min,
+                    high=np.finfo(sample_dtype).max,
                     size=shape
                 ).astype(npdt)
         elif npdt in [
@@ -133,7 +134,7 @@ class DataSampler:
 
 
     def sample_symbols_map_for(
-        self, sdfg: SDFG, maxval: int = 256
+        self, sdfg: SDFG, maxval: int = 128
     ) -> Dict[str, int]:
         symbol_map = dict()
         free_symbols_map = dict()

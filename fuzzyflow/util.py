@@ -10,6 +10,8 @@ from dace.sdfg import SDFG, SDFGState, ScopeSubgraphView
 from dace.sdfg import nodes as nd
 from dace.sdfg.state import StateSubgraphView
 from dace.transformation.transformation import (PatternTransformation,
+                                                SingleStateTransformation,
+                                                MultiStateTransformation,
                                                 SubgraphTransformation)
 
 
@@ -19,17 +21,14 @@ def transformation_get_affected_nodes(
 ) -> Set[Union[nd.Node, SDFGState]]:
     affected_nodes: Set[Union[nd.Node, SDFGState]] = set()
     if isinstance(xform, PatternTransformation):
-        for k, _ in xform._get_pattern_nodes().items():
-            try:
-                affected_nodes.add(getattr(xform, k))
-            except KeyError:
-                # Ignored.
-                pass
-    else:
+        return xform.affected_nodes(sdfg)
+    elif isinstance(SubgraphTransformation):
         sgv = xform.get_subgraph(sdfg)
         if isinstance(sgv, StateSubgraphView):
             for n in sgv.nodes():
                 affected_nodes.add(n)
+    else:
+        raise Exception('Unknown transformation type')
 
     if strict:
         return affected_nodes
@@ -92,21 +91,31 @@ def load_transformation_from_file(
 
 def translate_transformation(
     xform: Union[PatternTransformation, SubgraphTransformation],
-    state: SDFGState, target_sdfg: SDFG,
+    old_sdfg: SDFG, target_sdfg: SDFG,
     translation_dict: Dict[nd.Node, nd.Node]
 ) -> None:
-    xform.state_id = target_sdfg.node_id(target_sdfg.start_state)
-    if isinstance(xform, PatternTransformation):
+    if isinstance(xform, SingleStateTransformation):
+        old_state = old_sdfg.node(xform.state_id)
+        xform.state_id = target_sdfg.node_id(target_sdfg.start_state)
         xform._sdfg = target_sdfg
         for k in xform.subgraph.keys():
-            old_node = state.node(xform.subgraph[k])
+            old_node = old_state.node(xform.subgraph[k])
             if old_node in translation_dict:
                 new_node = translation_dict[old_node]
                 xform.subgraph[k] = target_sdfg.start_state.node_id(new_node)
+    elif isinstance(xform, MultiStateTransformation):
+        xform._sdfg = target_sdfg
+        for k in xform.subgraph.keys():
+            old_node = old_sdfg.node(xform.subgraph[k])
+            if old_node in translation_dict:
+                new_node = translation_dict[old_node]
+                xform.subgraph[k] = target_sdfg.node_id(new_node)
     else:
+        old_state = old_sdfg.node(xform.state_id)
+        xform.state_id = target_sdfg.node_id(target_sdfg.start_state)
         new_subgraph: Set[int] = set()
         for k in xform.subgraph:
-            old_node = state.node(k)
+            old_node = old_state.node(k)
             if old_node in translation_dict:
                 new_node = translation_dict[old_node]
                 new_subgraph.add(target_sdfg.start_state.node_id(new_node))
