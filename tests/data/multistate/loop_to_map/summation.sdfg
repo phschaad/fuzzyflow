@@ -1,0 +1,1816 @@
+{
+  "attributes": {
+    "_arrays": {
+      "__return": {
+        "attributes": {
+          "alignment": 0,
+          "allow_conflicts": false,
+          "debuginfo": null,
+          "dtype": "float64",
+          "lifetime": "Scope",
+          "location": {},
+          "may_alias": false,
+          "offset": [
+            "0"
+          ],
+          "shape": [
+            "1"
+          ],
+          "start_offset": 0,
+          "storage": "Default",
+          "strides": [
+            "1"
+          ],
+          "total_size": "1",
+          "transient": false
+        },
+        "type": "Array"
+      },
+      "__tmp1": {
+        "attributes": {
+          "allow_conflicts": false,
+          "debuginfo": null,
+          "dtype": "float64",
+          "lifetime": "Scope",
+          "location": {},
+          "shape": [
+            "1"
+          ],
+          "storage": "Default",
+          "transient": true
+        },
+        "type": "Scalar"
+      },
+      "data": {
+        "attributes": {
+          "alignment": 0,
+          "allow_conflicts": false,
+          "debuginfo": null,
+          "dtype": "float64",
+          "lifetime": "Scope",
+          "location": {},
+          "may_alias": false,
+          "offset": [
+            "0"
+          ],
+          "shape": [
+            "N"
+          ],
+          "start_offset": 0,
+          "storage": "Default",
+          "strides": [
+            "1"
+          ],
+          "total_size": "N",
+          "transient": false
+        },
+        "type": "Array"
+      },
+      "res": {
+        "attributes": {
+          "allow_conflicts": false,
+          "debuginfo": null,
+          "dtype": "float64",
+          "lifetime": "Scope",
+          "location": {},
+          "shape": [
+            "1"
+          ],
+          "storage": "Default",
+          "transient": true
+        },
+        "type": "Scalar"
+      }
+    },
+    "_pgrids": {},
+    "_rdistrarrays": {},
+    "_subarrays": {},
+    "arg_names": [
+      "data"
+    ],
+    "callback_mapping": {},
+    "constants_prop": {},
+    "debuginfo": {
+      "end_column": 0,
+      "end_line": 10,
+      "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+      "start_column": 0,
+      "start_line": 5,
+      "type": "DebugInfo"
+    },
+    "exit_code": {
+      "frame": {
+        "language": "CPP",
+        "string_data": ""
+      }
+    },
+    "global_code": {
+      "frame": {
+        "language": "CPP",
+        "string_data": ""
+      }
+    },
+    "init_code": {
+      "frame": {
+        "language": "CPP",
+        "string_data": ""
+      }
+    },
+    "instrument": "No_Instrumentation",
+    "logical_groups": [],
+    "name": "naive_summation",
+    "openmp_sections": true,
+    "orig_sdfg": {
+      "attributes": {
+        "_arrays": {
+          "__return": {
+            "attributes": {
+              "alignment": 0,
+              "allow_conflicts": false,
+              "debuginfo": null,
+              "dtype": "float64",
+              "lifetime": "Scope",
+              "location": {},
+              "may_alias": false,
+              "offset": [
+                "0"
+              ],
+              "shape": [
+                "1"
+              ],
+              "start_offset": 0,
+              "storage": "Default",
+              "strides": [
+                "1"
+              ],
+              "total_size": "1",
+              "transient": false
+            },
+            "type": "Array"
+          },
+          "__tmp1": {
+            "attributes": {
+              "allow_conflicts": false,
+              "debuginfo": null,
+              "dtype": "float64",
+              "lifetime": "Scope",
+              "location": {},
+              "shape": [
+                "1"
+              ],
+              "storage": "Default",
+              "transient": true
+            },
+            "type": "Scalar"
+          },
+          "data": {
+            "attributes": {
+              "alignment": 0,
+              "allow_conflicts": false,
+              "debuginfo": null,
+              "dtype": "float64",
+              "lifetime": "Scope",
+              "location": {},
+              "may_alias": false,
+              "offset": [
+                "0"
+              ],
+              "shape": [
+                "N"
+              ],
+              "start_offset": 0,
+              "storage": "Default",
+              "strides": [
+                "1"
+              ],
+              "total_size": "N",
+              "transient": false
+            },
+            "type": "Array"
+          },
+          "res": {
+            "attributes": {
+              "allow_conflicts": false,
+              "debuginfo": null,
+              "dtype": "float64",
+              "lifetime": "Scope",
+              "location": {},
+              "shape": [
+                "1"
+              ],
+              "storage": "Default",
+              "transient": true
+            },
+            "type": "Scalar"
+          }
+        },
+        "_pgrids": {},
+        "_rdistrarrays": {},
+        "_subarrays": {},
+        "arg_names": [
+          "data"
+        ],
+        "callback_mapping": {},
+        "constants_prop": {},
+        "debuginfo": {
+          "end_column": 0,
+          "end_line": 10,
+          "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+          "start_column": 0,
+          "start_line": 5,
+          "type": "DebugInfo"
+        },
+        "exit_code": {
+          "frame": {
+            "language": "CPP",
+            "string_data": ""
+          }
+        },
+        "global_code": {
+          "frame": {
+            "language": "CPP",
+            "string_data": ""
+          }
+        },
+        "init_code": {
+          "frame": {
+            "language": "CPP",
+            "string_data": ""
+          }
+        },
+        "instrument": "No_Instrumentation",
+        "logical_groups": [],
+        "name": "naive_summation",
+        "openmp_sections": true,
+        "orig_sdfg": null,
+        "symbols": {
+          "N": "int32",
+          "i": "int64"
+        },
+        "transformation_hist": []
+      },
+      "dace_version": "0.13.3",
+      "edges": [
+        {
+          "attributes": {
+            "data": {
+              "attributes": {
+                "assignments": {
+                  "i": "0"
+                },
+                "condition": {
+                  "language": "Python",
+                  "string_data": "1"
+                }
+              },
+              "label": "i=0",
+              "type": "InterstateEdge"
+            }
+          },
+          "dst": "2",
+          "src": "0",
+          "type": "Edge"
+        },
+        {
+          "attributes": {
+            "data": {
+              "attributes": {
+                "assignments": {},
+                "condition": {
+                  "language": "Python",
+                  "string_data": "(i < N)"
+                }
+              },
+              "label": "(i < N)",
+              "type": "InterstateEdge"
+            }
+          },
+          "dst": "1",
+          "src": "2",
+          "type": "Edge"
+        },
+        {
+          "attributes": {
+            "data": {
+              "attributes": {
+                "assignments": {},
+                "condition": {
+                  "language": "Python",
+                  "string_data": "(not (i < N))"
+                }
+              },
+              "label": "(not (i < N))",
+              "type": "InterstateEdge"
+            }
+          },
+          "dst": "3",
+          "src": "2",
+          "type": "Edge"
+        },
+        {
+          "attributes": {
+            "data": {
+              "attributes": {
+                "assignments": {
+                  "i": "(i + 1)"
+                },
+                "condition": {
+                  "language": "Python",
+                  "string_data": "1"
+                }
+              },
+              "label": "i=(i + 1)",
+              "type": "InterstateEdge"
+            }
+          },
+          "dst": "2",
+          "src": "1",
+          "type": "Edge"
+        }
+      ],
+      "nodes": [
+        {
+          "attributes": {
+            "dynamic_executions": false,
+            "executions": "1",
+            "instrument": "No_Instrumentation",
+            "is_collapsed": false,
+            "location": {},
+            "nosync": false,
+            "ranges": {}
+          },
+          "collapsed": false,
+          "edges": [
+            {
+              "attributes": {
+                "data": {
+                  "attributes": {
+                    "allow_oob": false,
+                    "data": "res",
+                    "debuginfo": null,
+                    "dst_subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "dynamic": false,
+                    "num_accesses": "1",
+                    "other_subset": null,
+                    "src_subset": null,
+                    "subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "volume": "1",
+                    "wcr": null,
+                    "wcr_nonatomic": false
+                  },
+                  "type": "Memlet"
+                }
+              },
+              "dst": "0",
+              "dst_connector": null,
+              "src": "1",
+              "src_connector": "__out",
+              "type": "MultiConnectorEdge"
+            }
+          ],
+          "id": 0,
+          "label": "assign_7_4",
+          "nodes": [
+            {
+              "attributes": {
+                "data": "res",
+                "debuginfo": {
+                  "end_column": 10,
+                  "end_line": 7,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 10,
+                  "start_line": 7,
+                  "type": "DebugInfo"
+                },
+                "in_connectors": {},
+                "instrument": "No_Instrumentation",
+                "out_connectors": {},
+                "setzero": false
+              },
+              "id": 0,
+              "label": "res",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "AccessNode"
+            },
+            {
+              "attributes": {
+                "code": {
+                  "language": "Python",
+                  "string_data": "__out = 0.0"
+                },
+                "code_exit": {
+                  "language": "CPP",
+                  "string_data": ""
+                },
+                "code_global": {
+                  "language": "CPP",
+                  "string_data": ""
+                },
+                "code_init": {
+                  "language": "CPP",
+                  "string_data": ""
+                },
+                "debuginfo": {
+                  "end_column": 10,
+                  "end_line": 7,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 10,
+                  "start_line": 7,
+                  "type": "DebugInfo"
+                },
+                "environments": [],
+                "in_connectors": {},
+                "instrument": "No_Instrumentation",
+                "label": "assign_7_4",
+                "location": {},
+                "out_connectors": {
+                  "__out": null
+                },
+                "side_effects": null,
+                "state_fields": []
+              },
+              "id": 1,
+              "label": "assign_7_4",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "Tasklet"
+            }
+          ],
+          "scope_dict": {
+            "-1": [
+              0,
+              1
+            ]
+          },
+          "type": "SDFGState"
+        },
+        {
+          "attributes": {
+            "dynamic_executions": false,
+            "executions": "N",
+            "instrument": "No_Instrumentation",
+            "is_collapsed": false,
+            "location": {},
+            "nosync": false,
+            "ranges": {
+              "i": {
+                "ranges": [
+                  {
+                    "end": "N - 1",
+                    "start": "0",
+                    "step": "1",
+                    "tile": "1"
+                  }
+                ],
+                "type": "Range"
+              }
+            }
+          },
+          "collapsed": false,
+          "edges": [
+            {
+              "attributes": {
+                "data": {
+                  "attributes": {
+                    "allow_oob": false,
+                    "data": "data",
+                    "debuginfo": null,
+                    "dst_subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "dynamic": false,
+                    "num_accesses": "1",
+                    "other_subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "src_subset": {
+                      "ranges": [
+                        {
+                          "end": "i",
+                          "start": "i",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "subset": {
+                      "ranges": [
+                        {
+                          "end": "i",
+                          "start": "i",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "volume": "1",
+                    "wcr": null,
+                    "wcr_nonatomic": false
+                  },
+                  "type": "Memlet"
+                }
+              },
+              "dst": "1",
+              "dst_connector": null,
+              "src": "0",
+              "src_connector": null,
+              "type": "MultiConnectorEdge"
+            },
+            {
+              "attributes": {
+                "data": {
+                  "attributes": {
+                    "allow_oob": false,
+                    "data": "res",
+                    "debuginfo": null,
+                    "dst_subset": null,
+                    "dynamic": false,
+                    "num_accesses": "1",
+                    "other_subset": null,
+                    "src_subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "volume": "1",
+                    "wcr": null,
+                    "wcr_nonatomic": false
+                  },
+                  "type": "Memlet"
+                }
+              },
+              "dst": "4",
+              "dst_connector": "__in1",
+              "src": "2",
+              "src_connector": null,
+              "type": "MultiConnectorEdge"
+            },
+            {
+              "attributes": {
+                "data": {
+                  "attributes": {
+                    "allow_oob": false,
+                    "data": "__tmp1",
+                    "debuginfo": null,
+                    "dst_subset": null,
+                    "dynamic": false,
+                    "num_accesses": "1",
+                    "other_subset": null,
+                    "src_subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "volume": "1",
+                    "wcr": null,
+                    "wcr_nonatomic": false
+                  },
+                  "type": "Memlet"
+                }
+              },
+              "dst": "4",
+              "dst_connector": "__in2",
+              "src": "1",
+              "src_connector": null,
+              "type": "MultiConnectorEdge"
+            },
+            {
+              "attributes": {
+                "data": {
+                  "attributes": {
+                    "allow_oob": false,
+                    "data": "res",
+                    "debuginfo": null,
+                    "dst_subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "dynamic": false,
+                    "num_accesses": "1",
+                    "other_subset": null,
+                    "src_subset": null,
+                    "subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "volume": "1",
+                    "wcr": null,
+                    "wcr_nonatomic": false
+                  },
+                  "type": "Memlet"
+                }
+              },
+              "dst": "3",
+              "dst_connector": null,
+              "src": "4",
+              "src_connector": "__out",
+              "type": "MultiConnectorEdge"
+            }
+          ],
+          "id": 1,
+          "label": "slice_data_9",
+          "nodes": [
+            {
+              "attributes": {
+                "data": "data",
+                "debuginfo": {
+                  "end_column": 20,
+                  "end_line": 9,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 20,
+                  "start_line": 9,
+                  "type": "DebugInfo"
+                },
+                "in_connectors": {},
+                "instrument": "No_Instrumentation",
+                "out_connectors": {},
+                "setzero": false
+              },
+              "id": 0,
+              "label": "data",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "AccessNode"
+            },
+            {
+              "attributes": {
+                "data": "__tmp1",
+                "debuginfo": {
+                  "end_column": 20,
+                  "end_line": 9,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 20,
+                  "start_line": 9,
+                  "type": "DebugInfo"
+                },
+                "in_connectors": {},
+                "instrument": "No_Instrumentation",
+                "out_connectors": {},
+                "setzero": false
+              },
+              "id": 1,
+              "label": "__tmp1",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "AccessNode"
+            },
+            {
+              "attributes": {
+                "data": "res",
+                "debuginfo": {
+                  "end_column": 20,
+                  "end_line": 9,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 20,
+                  "start_line": 9,
+                  "type": "DebugInfo"
+                },
+                "in_connectors": {},
+                "instrument": "No_Instrumentation",
+                "out_connectors": {},
+                "setzero": false
+              },
+              "id": 2,
+              "label": "res",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "AccessNode"
+            },
+            {
+              "attributes": {
+                "data": "res",
+                "debuginfo": {
+                  "end_column": 20,
+                  "end_line": 9,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 20,
+                  "start_line": 9,
+                  "type": "DebugInfo"
+                },
+                "in_connectors": {},
+                "instrument": "No_Instrumentation",
+                "out_connectors": {},
+                "setzero": false
+              },
+              "id": 3,
+              "label": "res",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "AccessNode"
+            },
+            {
+              "attributes": {
+                "code": {
+                  "language": "Python",
+                  "string_data": "__out = (__in1 + __in2)"
+                },
+                "code_exit": {
+                  "language": "CPP",
+                  "string_data": ""
+                },
+                "code_global": {
+                  "language": "CPP",
+                  "string_data": ""
+                },
+                "code_init": {
+                  "language": "CPP",
+                  "string_data": ""
+                },
+                "debuginfo": {
+                  "end_column": 20,
+                  "end_line": 9,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 20,
+                  "start_line": 9,
+                  "type": "DebugInfo"
+                },
+                "environments": [],
+                "in_connectors": {
+                  "__in1": null,
+                  "__in2": null
+                },
+                "instrument": "No_Instrumentation",
+                "label": "augassign_9_8",
+                "location": {},
+                "out_connectors": {
+                  "__out": null
+                },
+                "side_effects": null,
+                "state_fields": []
+              },
+              "id": 4,
+              "label": "augassign_9_8",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "Tasklet"
+            }
+          ],
+          "scope_dict": {
+            "-1": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          "type": "SDFGState"
+        },
+        {
+          "attributes": {
+            "dynamic_executions": false,
+            "executions": "N + 1",
+            "instrument": "No_Instrumentation",
+            "is_collapsed": false,
+            "location": {},
+            "nosync": false,
+            "ranges": {
+              "i": {
+                "ranges": [
+                  {
+                    "end": "N - 1",
+                    "start": "0",
+                    "step": "1",
+                    "tile": "1"
+                  }
+                ],
+                "type": "Range"
+              }
+            }
+          },
+          "collapsed": false,
+          "edges": [],
+          "id": 2,
+          "label": "guard",
+          "nodes": [],
+          "scope_dict": {
+            "-1": []
+          },
+          "type": "SDFGState"
+        },
+        {
+          "attributes": {
+            "dynamic_executions": false,
+            "executions": "1",
+            "instrument": "No_Instrumentation",
+            "is_collapsed": false,
+            "location": {},
+            "nosync": false,
+            "ranges": {}
+          },
+          "collapsed": false,
+          "edges": [
+            {
+              "attributes": {
+                "data": {
+                  "attributes": {
+                    "allow_oob": false,
+                    "data": "res",
+                    "debuginfo": null,
+                    "dst_subset": null,
+                    "dynamic": false,
+                    "num_accesses": "1",
+                    "other_subset": null,
+                    "src_subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "volume": "1",
+                    "wcr": null,
+                    "wcr_nonatomic": false
+                  },
+                  "type": "Memlet"
+                }
+              },
+              "dst": "2",
+              "dst_connector": "__inp",
+              "src": "0",
+              "src_connector": null,
+              "type": "MultiConnectorEdge"
+            },
+            {
+              "attributes": {
+                "data": {
+                  "attributes": {
+                    "allow_oob": false,
+                    "data": "__return",
+                    "debuginfo": null,
+                    "dst_subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "dynamic": false,
+                    "num_accesses": "1",
+                    "other_subset": null,
+                    "src_subset": null,
+                    "subset": {
+                      "ranges": [
+                        {
+                          "end": "0",
+                          "start": "0",
+                          "step": "1",
+                          "tile": "1"
+                        }
+                      ],
+                      "type": "Range"
+                    },
+                    "volume": "1",
+                    "wcr": null,
+                    "wcr_nonatomic": false
+                  },
+                  "type": "Memlet"
+                }
+              },
+              "dst": "1",
+              "dst_connector": null,
+              "src": "2",
+              "src_connector": "__out",
+              "type": "MultiConnectorEdge"
+            }
+          ],
+          "id": 3,
+          "label": "assign_10_4",
+          "nodes": [
+            {
+              "attributes": {
+                "data": "res",
+                "debuginfo": {
+                  "end_column": 11,
+                  "end_line": 10,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 11,
+                  "start_line": 10,
+                  "type": "DebugInfo"
+                },
+                "in_connectors": {},
+                "instrument": "No_Instrumentation",
+                "out_connectors": {},
+                "setzero": false
+              },
+              "id": 0,
+              "label": "res",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "AccessNode"
+            },
+            {
+              "attributes": {
+                "data": "__return",
+                "debuginfo": {
+                  "end_column": 11,
+                  "end_line": 10,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 11,
+                  "start_line": 10,
+                  "type": "DebugInfo"
+                },
+                "in_connectors": {},
+                "instrument": "No_Instrumentation",
+                "out_connectors": {},
+                "setzero": false
+              },
+              "id": 1,
+              "label": "__return",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "AccessNode"
+            },
+            {
+              "attributes": {
+                "code": {
+                  "language": "Python",
+                  "string_data": "__out = __inp"
+                },
+                "code_exit": {
+                  "language": "CPP",
+                  "string_data": ""
+                },
+                "code_global": {
+                  "language": "CPP",
+                  "string_data": ""
+                },
+                "code_init": {
+                  "language": "CPP",
+                  "string_data": ""
+                },
+                "debuginfo": {
+                  "end_column": 11,
+                  "end_line": 10,
+                  "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+                  "start_column": 11,
+                  "start_line": 10,
+                  "type": "DebugInfo"
+                },
+                "environments": [],
+                "in_connectors": {
+                  "__inp": null
+                },
+                "instrument": "No_Instrumentation",
+                "label": "assign_10_4",
+                "location": {},
+                "out_connectors": {
+                  "__out": null
+                },
+                "side_effects": null,
+                "state_fields": []
+              },
+              "id": 2,
+              "label": "assign_10_4",
+              "scope_entry": null,
+              "scope_exit": null,
+              "type": "Tasklet"
+            }
+          ],
+          "scope_dict": {
+            "-1": [
+              0,
+              1,
+              2
+            ]
+          },
+          "type": "SDFGState"
+        }
+      ],
+      "sdfg_list_id": 0,
+      "start_state": 0,
+      "type": "SDFG"
+    },
+    "symbols": {
+      "N": "int32",
+      "i": "int64"
+    },
+    "transformation_hist": [
+      {
+        "_subgraph": {
+          "0": 2,
+          "1": 4,
+          "2": 3
+        },
+        "expr_index": 0,
+        "sdfg_id": 0,
+        "state_id": 1,
+        "transformation": "AugAssignToWCR",
+        "type": "PatternTransformation"
+      },
+      {
+        "_subgraph": {
+          "0": 0,
+          "1": 2,
+          "2": 1
+        },
+        "expr_index": 0,
+        "sdfg_id": 0,
+        "state_id": 3,
+        "transformation": "TrivialTaskletElimination",
+        "type": "PatternTransformation"
+      }
+    ]
+  },
+  "dace_version": "0.13.3",
+  "edges": [
+    {
+      "attributes": {
+        "data": {
+          "attributes": {
+            "assignments": {
+              "i": "0"
+            },
+            "condition": {
+              "language": "Python",
+              "string_data": "1"
+            }
+          },
+          "label": "i=0",
+          "type": "InterstateEdge"
+        }
+      },
+      "dst": "2",
+      "src": "0",
+      "type": "Edge"
+    },
+    {
+      "attributes": {
+        "data": {
+          "attributes": {
+            "assignments": {},
+            "condition": {
+              "language": "Python",
+              "string_data": "(i < N)"
+            }
+          },
+          "label": "(i < N)",
+          "type": "InterstateEdge"
+        }
+      },
+      "dst": "1",
+      "src": "2",
+      "type": "Edge"
+    },
+    {
+      "attributes": {
+        "data": {
+          "attributes": {
+            "assignments": {},
+            "condition": {
+              "language": "Python",
+              "string_data": "(not (i < N))"
+            }
+          },
+          "label": "(not (i < N))",
+          "type": "InterstateEdge"
+        }
+      },
+      "dst": "3",
+      "src": "2",
+      "type": "Edge"
+    },
+    {
+      "attributes": {
+        "data": {
+          "attributes": {
+            "assignments": {
+              "i": "(i + 1)"
+            },
+            "condition": {
+              "language": "Python",
+              "string_data": "1"
+            }
+          },
+          "label": "i=(i + 1)",
+          "type": "InterstateEdge"
+        }
+      },
+      "dst": "2",
+      "src": "1",
+      "type": "Edge"
+    }
+  ],
+  "nodes": [
+    {
+      "attributes": {
+        "dynamic_executions": false,
+        "executions": "1",
+        "instrument": "No_Instrumentation",
+        "is_collapsed": false,
+        "location": {},
+        "nosync": false,
+        "ranges": {}
+      },
+      "collapsed": false,
+      "edges": [
+        {
+          "attributes": {
+            "data": {
+              "attributes": {
+                "allow_oob": false,
+                "data": "res",
+                "debuginfo": null,
+                "dst_subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "dynamic": false,
+                "num_accesses": "1",
+                "other_subset": null,
+                "src_subset": null,
+                "subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "volume": "1",
+                "wcr": null,
+                "wcr_nonatomic": false
+              },
+              "type": "Memlet"
+            }
+          },
+          "dst": "0",
+          "dst_connector": null,
+          "src": "1",
+          "src_connector": "__out",
+          "type": "MultiConnectorEdge"
+        }
+      ],
+      "id": 0,
+      "label": "assign_7_4",
+      "nodes": [
+        {
+          "attributes": {
+            "data": "res",
+            "debuginfo": {
+              "end_column": 10,
+              "end_line": 7,
+              "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+              "start_column": 10,
+              "start_line": 7,
+              "type": "DebugInfo"
+            },
+            "in_connectors": {},
+            "instrument": "No_Instrumentation",
+            "out_connectors": {},
+            "setzero": false
+          },
+          "id": 0,
+          "label": "res",
+          "scope_entry": null,
+          "scope_exit": null,
+          "type": "AccessNode"
+        },
+        {
+          "attributes": {
+            "code": {
+              "language": "Python",
+              "string_data": "__out = 0.0"
+            },
+            "code_exit": {
+              "language": "CPP",
+              "string_data": ""
+            },
+            "code_global": {
+              "language": "CPP",
+              "string_data": ""
+            },
+            "code_init": {
+              "language": "CPP",
+              "string_data": ""
+            },
+            "debuginfo": {
+              "end_column": 10,
+              "end_line": 7,
+              "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+              "start_column": 10,
+              "start_line": 7,
+              "type": "DebugInfo"
+            },
+            "environments": [],
+            "in_connectors": {},
+            "instrument": "No_Instrumentation",
+            "label": "assign_7_4",
+            "location": {},
+            "out_connectors": {
+              "__out": null
+            },
+            "side_effects": null,
+            "state_fields": []
+          },
+          "id": 1,
+          "label": "assign_7_4",
+          "scope_entry": null,
+          "scope_exit": null,
+          "type": "Tasklet"
+        }
+      ],
+      "scope_dict": {
+        "-1": [
+          0,
+          1
+        ]
+      },
+      "type": "SDFGState"
+    },
+    {
+      "attributes": {
+        "dynamic_executions": false,
+        "executions": "N",
+        "instrument": "No_Instrumentation",
+        "is_collapsed": false,
+        "location": {},
+        "nosync": false,
+        "ranges": {
+          "i": {
+            "ranges": [
+              {
+                "end": "N - 1",
+                "start": "0",
+                "step": "1",
+                "tile": "1"
+              }
+            ],
+            "type": "Range"
+          }
+        }
+      },
+      "collapsed": false,
+      "edges": [
+        {
+          "attributes": {
+            "data": {
+              "attributes": {
+                "allow_oob": false,
+                "data": "data",
+                "debuginfo": null,
+                "dst_subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "dynamic": false,
+                "num_accesses": "1",
+                "other_subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "src_subset": {
+                  "ranges": [
+                    {
+                      "end": "i",
+                      "start": "i",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "subset": {
+                  "ranges": [
+                    {
+                      "end": "i",
+                      "start": "i",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "volume": "1",
+                "wcr": null,
+                "wcr_nonatomic": false
+              },
+              "type": "Memlet"
+            }
+          },
+          "dst": "1",
+          "dst_connector": null,
+          "src": "0",
+          "src_connector": null,
+          "type": "MultiConnectorEdge"
+        },
+        {
+          "attributes": {
+            "data": {
+              "attributes": {
+                "allow_oob": false,
+                "data": "__tmp1",
+                "debuginfo": null,
+                "dst_subset": null,
+                "dynamic": false,
+                "num_accesses": "1",
+                "other_subset": null,
+                "src_subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "volume": "1",
+                "wcr": null,
+                "wcr_nonatomic": false
+              },
+              "type": "Memlet"
+            }
+          },
+          "dst": "3",
+          "dst_connector": "__in2",
+          "src": "1",
+          "src_connector": null,
+          "type": "MultiConnectorEdge"
+        },
+        {
+          "attributes": {
+            "data": {
+              "attributes": {
+                "allow_oob": false,
+                "data": "res",
+                "debuginfo": null,
+                "dst_subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "dynamic": false,
+                "num_accesses": "1",
+                "other_subset": null,
+                "src_subset": null,
+                "subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "volume": "1",
+                "wcr": "(lambda a, b: (a + b))",
+                "wcr_nonatomic": false
+              },
+              "type": "Memlet"
+            }
+          },
+          "dst": "2",
+          "dst_connector": null,
+          "src": "3",
+          "src_connector": "__out",
+          "type": "MultiConnectorEdge"
+        }
+      ],
+      "id": 1,
+      "label": "slice_data_9",
+      "nodes": [
+        {
+          "attributes": {
+            "data": "data",
+            "debuginfo": {
+              "end_column": 20,
+              "end_line": 9,
+              "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+              "start_column": 20,
+              "start_line": 9,
+              "type": "DebugInfo"
+            },
+            "in_connectors": {},
+            "instrument": "No_Instrumentation",
+            "out_connectors": {},
+            "setzero": false
+          },
+          "id": 0,
+          "label": "data",
+          "scope_entry": null,
+          "scope_exit": null,
+          "type": "AccessNode"
+        },
+        {
+          "attributes": {
+            "data": "__tmp1",
+            "debuginfo": {
+              "end_column": 20,
+              "end_line": 9,
+              "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+              "start_column": 20,
+              "start_line": 9,
+              "type": "DebugInfo"
+            },
+            "in_connectors": {},
+            "instrument": "No_Instrumentation",
+            "out_connectors": {},
+            "setzero": false
+          },
+          "id": 1,
+          "label": "__tmp1",
+          "scope_entry": null,
+          "scope_exit": null,
+          "type": "AccessNode"
+        },
+        {
+          "attributes": {
+            "data": "res",
+            "debuginfo": {
+              "end_column": 20,
+              "end_line": 9,
+              "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+              "start_column": 20,
+              "start_line": 9,
+              "type": "DebugInfo"
+            },
+            "in_connectors": {},
+            "instrument": "No_Instrumentation",
+            "out_connectors": {},
+            "setzero": false
+          },
+          "id": 2,
+          "label": "res",
+          "scope_entry": null,
+          "scope_exit": null,
+          "type": "AccessNode"
+        },
+        {
+          "attributes": {
+            "code": {
+              "language": "Python",
+              "string_data": "__out = __in2"
+            },
+            "code_exit": {
+              "language": "CPP",
+              "string_data": ""
+            },
+            "code_global": {
+              "language": "CPP",
+              "string_data": ""
+            },
+            "code_init": {
+              "language": "CPP",
+              "string_data": ""
+            },
+            "debuginfo": {
+              "end_column": 20,
+              "end_line": 9,
+              "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+              "start_column": 20,
+              "start_line": 9,
+              "type": "DebugInfo"
+            },
+            "environments": [],
+            "in_connectors": {
+              "__in2": null
+            },
+            "instrument": "No_Instrumentation",
+            "label": "augassign_9_8",
+            "location": {},
+            "out_connectors": {
+              "__out": null
+            },
+            "side_effects": null,
+            "state_fields": []
+          },
+          "id": 3,
+          "label": "augassign_9_8",
+          "scope_entry": null,
+          "scope_exit": null,
+          "type": "Tasklet"
+        }
+      ],
+      "scope_dict": {
+        "-1": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "type": "SDFGState"
+    },
+    {
+      "attributes": {
+        "dynamic_executions": false,
+        "executions": "N + 1",
+        "instrument": "No_Instrumentation",
+        "is_collapsed": false,
+        "location": {},
+        "nosync": false,
+        "ranges": {
+          "i": {
+            "ranges": [
+              {
+                "end": "N - 1",
+                "start": "0",
+                "step": "1",
+                "tile": "1"
+              }
+            ],
+            "type": "Range"
+          }
+        }
+      },
+      "collapsed": false,
+      "edges": [],
+      "id": 2,
+      "label": "guard",
+      "nodes": [],
+      "scope_dict": {
+        "-1": []
+      },
+      "type": "SDFGState"
+    },
+    {
+      "attributes": {
+        "dynamic_executions": false,
+        "executions": "1",
+        "instrument": "No_Instrumentation",
+        "is_collapsed": false,
+        "location": {},
+        "nosync": false,
+        "ranges": {}
+      },
+      "collapsed": false,
+      "edges": [
+        {
+          "attributes": {
+            "data": {
+              "attributes": {
+                "allow_oob": false,
+                "data": "__return",
+                "debuginfo": null,
+                "dst_subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "dynamic": false,
+                "num_accesses": "1",
+                "other_subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "src_subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "subset": {
+                  "ranges": [
+                    {
+                      "end": "0",
+                      "start": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ],
+                  "type": "Range"
+                },
+                "volume": "1",
+                "wcr": null,
+                "wcr_nonatomic": false
+              },
+              "type": "Memlet"
+            }
+          },
+          "dst": "1",
+          "dst_connector": null,
+          "src": "0",
+          "src_connector": null,
+          "type": "MultiConnectorEdge"
+        }
+      ],
+      "id": 3,
+      "label": "assign_10_4",
+      "nodes": [
+        {
+          "attributes": {
+            "data": "res",
+            "debuginfo": {
+              "end_column": 11,
+              "end_line": 10,
+              "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+              "start_column": 11,
+              "start_line": 10,
+              "type": "DebugInfo"
+            },
+            "in_connectors": {},
+            "instrument": "No_Instrumentation",
+            "out_connectors": {},
+            "setzero": false
+          },
+          "id": 0,
+          "label": "res",
+          "scope_entry": null,
+          "scope_exit": null,
+          "type": "AccessNode"
+        },
+        {
+          "attributes": {
+            "data": "__return",
+            "debuginfo": {
+              "end_column": 11,
+              "end_line": 10,
+              "filename": "d:\\UserData\\Documents\\ETH\\tmp\\SC22_CaseStudy\\summation.py",
+              "start_column": 11,
+              "start_line": 10,
+              "type": "DebugInfo"
+            },
+            "in_connectors": {},
+            "instrument": "No_Instrumentation",
+            "out_connectors": {},
+            "setzero": false
+          },
+          "id": 1,
+          "label": "__return",
+          "scope_entry": null,
+          "scope_exit": null,
+          "type": "AccessNode"
+        }
+      ],
+      "scope_dict": {
+        "-1": [
+          0,
+          1
+        ]
+      },
+      "type": "SDFGState"
+    }
+  ],
+  "sdfg_list_id": 0,
+  "start_state": 0,
+  "type": "SDFG"
+}

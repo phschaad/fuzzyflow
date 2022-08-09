@@ -38,21 +38,6 @@ def _input_volume_for_nodes(
     return total_volume, inputs
 
 
-def _stateset_frontier(
-    sdfg: SDFG, states: Set[SDFGState]
-) -> Tuple[Set[SDFGState], Set]:
-    frontier = set()
-    frontier_edges = set()
-    for state in states:
-        for iedge in sdfg.in_edges(state):
-            if iedge.src not in states:
-                if iedge.src not in frontier:
-                    frontier.add(iedge.src)
-                if iedge not in frontier_edges:
-                    frontier_edges.add(iedge)
-    return frontier, frontier_edges
-
-
 def _minimum_dominator_flow_cutout(
     sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
 ) -> SDFG:
@@ -82,52 +67,9 @@ def _minimal_transformation_cutout(
 
         return ct
     elif isinstance(xform, MultiStateTransformation):
-        cutout_states: Set[SDFGState] = set(affected_nodes)
-
-        start_state: SDFGState = None
-        for state in cutout_states:
-            if state == sdfg.start_state:
-                start_state = state
-                break
-
-        if start_state is None:
-            bfs_queue = deque()
-            bfs_queue.append(_stateset_frontier(sdfg, cutout_states))
-
-            while len(bfs_queue) > 0:
-                frontier, frontier_edges = bfs_queue.popleft()
-                if len(frontier_edges) == 0:
-                    raise Exception(
-                        'No explicit start state, but also no frontier to ' +
-                        'choose from'
-                    )
-                elif len(frontier_edges) == 1:
-                    # The destination of the only frontier edge must be the
-                    # start state, since only one edge leads into the subgraph.
-                    start_state = list(frontier_edges)[0].dst
-                else:
-                    if len(frontier) == 0:
-                        raise Exception(
-                            'No explicit start state, but also no frontier ' +
-                            'to choose from'
-                        )
-                    if len(frontier) == 1:
-                        # For many frontier edges but only one frontier state,
-                        # the frontier state is the new start state and is
-                        # included in the cutout.
-                        start_state = list(frontier)[0]
-                        cutout_states.add(start_state)
-                    else:
-                        for s in frontier:
-                            cutout_states.add(s)
-                        bfs_queue.append(
-                            _stateset_frontier(sdfg, cutout_states)
-                        )
-
         translation_dict: Dict[SDFGState, SDFGState] = dict()
         ct: SDFG = dcut.multistate_cutout(
-            sdfg, start_state, *cutout_states,
-            inserted_states=translation_dict
+            sdfg, *affected_nodes, inserted_states=translation_dict
         )
         util.translate_transformation(xform, sdfg, ct, translation_dict)
 

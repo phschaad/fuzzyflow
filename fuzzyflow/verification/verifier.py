@@ -69,7 +69,7 @@ class TransformationVerifier:
 
     def verify(
         self, n_samples: int = 1, status: bool = False,
-        debug_save_path: str = None
+        debug_save_path: str = None, enforce_finiteness: bool = False
     ) -> bool:
         cutout = self.cutout(status=status)
         original_cutout = deepcopy(cutout)
@@ -99,12 +99,16 @@ class TransformationVerifier:
         with alive_bar(n_samples, disable=(not status)) as bar:
             i = 0
             resample_attempt = 0
+            decay_by = 0
+            decays = []
+            full_resampling_failures = 0
             while i < n_samples:
-            #for _ in range(n_samples):
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                     original_cutout
                 )
-                inputs = sampler.sample_inputs_for(original_cutout, symbols_map)
+                inputs = sampler.sample_inputs_for(
+                    original_cutout, symbols_map, decay_by=decay_by
+                )
                 out_orig = sampler.generate_output_containers_for(
                     original_cutout, symbols_map
                 )
@@ -142,6 +146,10 @@ class TransformationVerifier:
                         continue
                     oval = orig_containers[k]
                     nval = xformed_containers[k]
+
+                    if enforce_finiteness and not np.isfinite(oval).all():
+                        resample = True
+
                     if isinstance(oval, np.ndarray):
                         if not np.allclose(oval, nval, equal_nan=True):
                             return False
@@ -149,13 +157,34 @@ class TransformationVerifier:
                         if not np.allclose([oval], [nval], equal_nan=True):
                             return False
 
-                if not resample or resample_attempt >= 10:
+                if not resample or resample_attempt > 11:
+                    if resample_attempt > 11:
+                        full_resampling_failures += 1
                     resample_attempt = 0
+                    if enforce_finiteness and decay_by > 0:
+                        decays.append(decay_by)
+                    decay_by = 0
                     bar()
                     i += 1
-                elif resample_attempt < 10:
-                    print('Resampling for i', i)
-                    print('Attempt', resample_attempt + 1)
+                else:
+                    if resample_attempt >= 2:
+                        if decay_by == 0:
+                            decay_by = 1
+                        else:
+                            decay_by *= 2
                     resample_attempt += 1
+            n_decayed = len(decays)
+            if enforce_finiteness and n_decayed > 0:
+                print(
+                    'Decayed on', str(n_decayed), 'out of', str(n_samples),
+                    'samples with a median decay factor of',
+                    str((2 ** -np.median(decays)))
+                )
+                if full_resampling_failures:
+                    print(
+                        'Failed to decay even with a factor of',
+                        str((2 ** -512)), str(full_resampling_failures),
+                        'times'
+                    )
 
         return True

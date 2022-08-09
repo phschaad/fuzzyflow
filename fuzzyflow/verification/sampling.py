@@ -8,10 +8,11 @@ from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
 from dace import dtypes as ddtypes
-from dace.data import Data, Scalar
+from dace.data import Data, Scalar, make_array_from_descriptor
 from dace.sdfg import SDFG
 from dace.sdfg import nodes as nd
 from dace.symbolic import symbol
+from dace.libraries.standard.memory import aligned_ndarray
 from sympy.core import Expr
 from sympy.core.numbers import Number
 
@@ -41,7 +42,8 @@ class DataSampler:
 
 
     def _uniform_samling(
-        self, name: str, array: Data, shape: Union[List, Tuple]
+        self, name: str, array: Data, shape: Union[List, Tuple],
+        decay_by: int = 0
     ) -> Union[np.ndarray, np.number]:
         npdt = array.dtype.as_numpy_dtype()
         if npdt in [np.float16, np.float32, np.float64]:
@@ -50,31 +52,27 @@ class DataSampler:
             # find an alternative way of ensuring the entire float64 spectrum
             # is covered and sampled.
             sample_dtype = npdt
-            if npdt == np.float64:
+            if npdt == np.float64 and decay_by == 0:
                 sample_dtype = np.float32
+
+            low = np.finfo(sample_dtype).min * (2 ** -decay_by)
+            high = np.finfo(sample_dtype).max * (2 ** -decay_by)
             if isinstance(array, Scalar):
-                return self.random_state.uniform(
-                    low=np.finfo(sample_dtype).min,
-                    high=np.finfo(sample_dtype).max
-                )
+                return self.random_state.uniform(low=low, high=high)
             else:
                 return self.random_state.uniform(
-                    low=np.finfo(sample_dtype).min,
-                    high=np.finfo(sample_dtype).max,
-                    size=shape
+                    low=low, high=high, size=shape
                 ).astype(npdt)
         elif npdt in [
             np.int8, np.int16, np.int32, np.int64,
             np.uint8, np.uint16, np.uint32, np.uint64
         ]:
+            low = np.iinfo(npdt).min * (2 ** -decay_by)
+            high = np.iinfo(npdt).max * (2 ** -decay_by)
             if isinstance(array, Scalar):
-                return np.random.randint(
-                    np.iinfo(npdt).min, np.iinfo(npdt).max
-                )
+                return np.random.randint(low, high)
             else:
-                return np.random.randint(
-                    np.iinfo(npdt).min, np.iinfo(npdt).max, size=shape
-                ).astype(npdt)
+                return np.random.randint(low, high, size=shape).astype(npdt)
         elif array.dtype in [ddtypes.bool, ddtypes.bool_]:
             if isinstance(array, Scalar):
                 return np.random.randint(low=0, high=2)
@@ -88,7 +86,8 @@ class DataSampler:
 
     def _sample_data_for_nodes(
         self, nodes: List[nd.AccessNode], sdfg: SDFG,
-        symbols_map: Dict[str, int], sample: bool = True
+        symbols_map: Dict[str, int], sample: bool = True,
+        decay_by: int = 0
     ) -> Dict[str, np.ndarray]:
         retdict = dict()
         data: Set[Tuple[str, Data]] = set()
@@ -119,16 +118,30 @@ class DataSampler:
                     shape.append(x)
             if sample:
                 if self.strategy == SamplingStrategy.SIMPLE_UNIFORM:
-                    retdict[name] = self._uniform_samling(name, array, shape)
+                    newdata = self._uniform_samling(
+                        name, array, shape, decay_by
+                    )
                 else:
                     raise NotImplementedError()
             else:
                 if isinstance(array, Scalar):
-                    retdict[name] = 0
+                    newdata = 0
                 else:
-                    retdict[name] = np.zeros(shape).astype(
+                    newdata = np.zeros(shape).astype(
                         array.dtype.as_numpy_dtype()
                     )
+
+            if isinstance(array, Scalar):
+                retdict[name] = newdata
+            else:
+                view: np.ndarray = make_array_from_descriptor(
+                    array, newdata, symbols_map
+                )
+                if array.alignment:
+                    aligned = aligned_ndarray(view, array.alignment)
+                    retdict[name] = aligned
+                else:
+                    retdict[name] = view
 
         return retdict
 
@@ -143,16 +156,21 @@ class DataSampler:
         for k in sdfg.free_symbols:
             symbol_map[k] = random.randint(0, maxval)
             free_symbols_map[k] = symbol_map[k]
+        for k in sdfg.symbols:
+            if k not in symbol_map:
+                symbol_map[k] = 0
         return symbol_map, free_symbols_map
 
 
     def sample_inputs_for(
-        self, sdfg: SDFG, symbols_map: Dict[str, int] = None
+        self, sdfg: SDFG, symbols_map: Dict[str, int] = None,
+        decay_by: int = 0
     ) -> Dict[str, np.ndarray]:
         if symbols_map is None:
             symbols_map = self.sample_symbols_map_for(sdfg)
         return self._sample_data_for_nodes(
-            sdfg.input_arrays(), sdfg, symbols_map
+            sdfg.input_arrays(), sdfg, symbols_map, sample=True,
+            decay_by=decay_by
         )
 
 
@@ -162,5 +180,5 @@ class DataSampler:
         if symbols_map is None:
             symbols_map = self.sample_symbols_map_for(sdfg)
         return self._sample_data_for_nodes(
-            sdfg.output_arrays(), sdfg, symbols_map, False
+            sdfg.output_arrays(), sdfg, symbols_map, sample=False
         )

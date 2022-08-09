@@ -1,4 +1,5 @@
 import os
+from typing import Dict, List
 from alive_progress import alive_bar
 
 import dace
@@ -8,7 +9,7 @@ from dace.transformation import dataflow, interstate, subgraph
 import fuzzyflow as ff
 
 
-def _test_from_basedir(datadir: str, base_sdfg: SDFG, category_name: str):
+def _test_from_basedir(datadir: str, category_name: str):
     verify_dict = dict()
     for _, testdirs, _ in os.walk(datadir):
         bartitle = f'Testing {category_name}'
@@ -20,51 +21,61 @@ def _test_from_basedir(datadir: str, base_sdfg: SDFG, category_name: str):
                 if dir.startswith('z_'):
                     bar()
                     continue
-                for subdir, _, files in os.walk(os.path.join(datadir, dir)):
+
+                valid = True
+                offending_file = None
+                print('Verifying', dir)
+
+                testdir = os.path.join(datadir, dir)
+
+                dbg_save_dir = os.path.join(testdir, 'dbg')
+                if not os.path.exists(dbg_save_dir):
+                    os.makedirs(dbg_save_dir)
+
+                test_sdfgs: Dict[str, SDFG] = dict()
+                test_files: List[str] = []
+                for file in os.listdir(testdir):
                     # Ignore the debug directory.
-                    if subdir.endswith('dbg'):
+                    if file == 'dbg':
                         continue
 
-                    dbg_save_dir = os.path.join(subdir, 'dbg')
-                    if not os.path.exists(dbg_save_dir):
-                        os.makedirs(dbg_save_dir)
-
-                    override_sdfg_name = None
-                    for file in files:
-                        if file.endswith('.sdfg'):
-                            override_sdfg_name = file
-                    sdfg = (
-                        SDFG.from_file(os.path.join(subdir, override_sdfg_name))
-                        if override_sdfg_name is not None else base_sdfg
-                    )
-                    valid = True
-                    offending_file = None
-                    print('Verifying', subdir)
-                    for file in files:
-                        if file != override_sdfg_name:
+                    if file.endswith('.sdfg'):
+                        sdfg = SDFG.from_file(os.path.join(testdir, file))
+                        sdfg_name = file.split('.')[0]
+                        test_sdfgs[sdfg_name] = sdfg
+                    else:
+                        test_files.append(file)
+                for sdfg_name, _ in test_sdfgs.items():
+                    for file in test_files:
+                        if file.startswith(sdfg_name):
+                            testfile = os.path.join(testdir, file)
                             xform, _ = ff.load_transformation_from_file(
-                                os.path.join(subdir, file), sdfg
+                                testfile, sdfg
                             )
 
                             verifier = ff.TransformationVerifier(
                                 xform, sdfg, ff.CutoutStrategy.SIMPLE
                             )
                             valid = valid and verifier.verify(
-                                n_samples=500,
+                                n_samples=100,
                                 debug_save_path=os.path.join(
                                     dbg_save_dir, file.split('.')[0]
-                                )
+                                ),
+                                enforce_finiteness=False
                             )
                             if not valid:
                                 offending_file = file
                                 break
                     if not valid:
-                        print(subdir, 'is invalid!')
-                        if offending_file is not None:
-                            print('Offending file is', offending_file)
-                    else:
-                        print(subdir, 'verified')
-                    verify_dict[os.path.basename(subdir)] = valid
+                        break
+
+                if not valid:
+                    print(dir, 'is invalid!')
+                    if offending_file is not None:
+                        print('Offending file is', offending_file)
+                else:
+                    print(dir, 'verified')
+                verify_dict[os.path.basename(dir)] = valid
 
                 bar()
 
@@ -79,14 +90,12 @@ def _test_from_basedir(datadir: str, base_sdfg: SDFG, category_name: str):
 
 def test_multistate():
     datadir = './tests/data/multistate'
-    base_sdfg = SDFG.from_file(os.path.join(datadir, 'summation.sdfg'))
-    _test_from_basedir(datadir, base_sdfg, 'multistate transformations')
+    _test_from_basedir(datadir, 'multistate transformations')
 
 
 def test_singlestate():
     datadir = './tests/data/singlestate'
-    base_sdfg = SDFG.from_file(os.path.join(datadir, 'hdiff.sdfg'))
-    _test_from_basedir(datadir, base_sdfg, 'singlestate transformations')
+    _test_from_basedir(datadir, 'singlestate transformations')
 
 def main():
     test_singlestate()

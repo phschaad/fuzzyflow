@@ -21,8 +21,8 @@ def transformation_get_affected_nodes(
 ) -> Set[Union[nd.Node, SDFGState]]:
     affected_nodes: Set[Union[nd.Node, SDFGState]] = set()
     if isinstance(xform, PatternTransformation):
-        return xform.affected_nodes(sdfg)
-    elif isinstance(SubgraphTransformation):
+        affected_nodes = xform.affected_nodes(sdfg)
+    elif isinstance(xform, SubgraphTransformation):
         sgv = xform.get_subgraph(sdfg)
         if isinstance(sgv, StateSubgraphView):
             for n in sgv.nodes():
