@@ -8,7 +8,7 @@ from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
 from dace import dtypes as ddtypes
-from dace.data import Data, Scalar, make_array_from_descriptor
+from dace.data import Data, Scalar, make_array_from_descriptor, Array
 from dace.sdfg import SDFG
 from dace.sdfg import nodes as nd
 from dace.symbolic import symbol
@@ -137,7 +137,7 @@ class DataSampler:
                 view: np.ndarray = make_array_from_descriptor(
                     array, newdata, symbols_map
                 )
-                if array.alignment:
+                if isinstance(array, Array) and array.alignment:
                     aligned = aligned_ndarray(view, array.alignment)
                     retdict[name] = aligned
                 else:
