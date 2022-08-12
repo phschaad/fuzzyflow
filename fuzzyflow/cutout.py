@@ -52,28 +52,31 @@ def _minimum_dominator_flow_cutout(
 
 
 def _minimal_transformation_cutout(
-    sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
+    p_sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
 ) -> SDFG:
-    affected_nodes = util.transformation_get_affected_nodes(sdfg, xform)
+    affected_nodes = util.transformation_get_affected_nodes(p_sdfg, xform)
+    if xform.sdfg_id >= 0 and p_sdfg.sdfg_list:
+        sdfg = p_sdfg.sdfg_list[xform.sdfg_id]
+    else:
+        sdfg = p_sdfg
+
     if (isinstance(xform, SubgraphTransformation) or
         isinstance(xform, SingleStateTransformation)):
         state = sdfg.node(xform.state_id)
         translation_dict: Dict[nd.Node, nd.Node] = dict()
-        ct: SDFG = dcut.cutout_state(
-            state, *affected_nodes, make_copy=True,
-            inserted_nodes=translation_dict
+        cutout = dcut.cutout(
+            *affected_nodes, translation=translation_dict, state=state
         )
-        util.translate_transformation(xform, sdfg, ct, translation_dict)
-
-        return ct
+        util.translate_transformation(xform, sdfg, cutout, translation_dict)
+        return cutout
     elif isinstance(xform, MultiStateTransformation):
         translation_dict: Dict[SDFGState, SDFGState] = dict()
-        ct: SDFG = dcut.multistate_cutout(
-            sdfg, *affected_nodes, inserted_states=translation_dict
+        cutout: SDFG = dcut.cutout(
+            *affected_nodes, translation=translation_dict, state=None
         )
-        util.translate_transformation(xform, sdfg, ct, translation_dict)
-
-        return ct
+        o_sdfg = list(affected_nodes)[0].parent
+        util.translate_transformation(xform, o_sdfg, cutout, translation_dict)
+        return cutout
     raise Exception('This type of transformation cannot be supported')
 
 

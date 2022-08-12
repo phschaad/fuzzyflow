@@ -2,11 +2,12 @@
 # This file is part of FuzzyFlow, which is released under the BSD 3-Clause
 # License. For details, see the LICENSE file.
 
+from alive_progress import alive_bar
 from copy import deepcopy
 from typing import List, Union
 import numpy as np
 
-from alive_progress import alive_bar
+from dace import config
 from dace.codegen.compiled_sdfg import CompiledSDFG
 from dace.sdfg import SDFG
 from dace.sdfg import nodes as nd
@@ -67,7 +68,7 @@ class TransformationVerifier:
         return self._cutout
 
 
-    def verify(
+    def _do_verify(
         self, n_samples: int = 1, status: bool = False,
         debug_save_path: str = None, enforce_finiteness: bool = False
     ) -> bool:
@@ -109,6 +110,7 @@ class TransformationVerifier:
                 inputs = sampler.sample_inputs_for(
                     original_cutout, symbols_map, decay_by=decay_by
                 )
+                inputs_xformed = deepcopy(inputs)
                 out_orig = sampler.generate_output_containers_for(
                     original_cutout, symbols_map
                 )
@@ -123,6 +125,7 @@ class TransformationVerifier:
                 for k in out_orig.keys():
                     if not k in orig_containers:
                         orig_containers[k] = out_orig[k]
+                pass
                 prog_orig.__call__(
                     **orig_containers, **free_symbols_map
                 )
@@ -130,10 +133,11 @@ class TransformationVerifier:
                 xformed_containers = dict()
                 for k in inputs.keys():
                     if not k in xformed_containers:
-                        xformed_containers[k] = inputs[k]
+                        xformed_containers[k] = inputs_xformed[k]
                 for k in out_xformed.keys():
                     if not k in xformed_containers:
                         xformed_containers[k] = out_xformed[k]
+                pass
                 prog_xformed.__call__(
                     **xformed_containers, **free_symbols_map
                 )
@@ -188,3 +192,23 @@ class TransformationVerifier:
                     )
 
         return True
+
+
+    def verify(
+        self, n_samples: int = 1, status: bool = False,
+        debug_save_path: str = None, enforce_finiteness: bool = False
+    ) -> bool:
+        with config.temporary_config():
+            config.Config.set(
+                'compiler',
+                'cpu',
+                'args',
+                value='-std=c++14 -fPIC -Wall -Wextra -O2 ' +
+                    '-Wno-unused-parameter -Wno-unused-label'
+            )
+            config.Config.set('compiler', 'allow_view_arguments', value=True)
+            config.Config.set('profiling', value=False)
+            config.Config.set('debugprint', value=False)
+            return self._do_verify(
+                n_samples, status, debug_save_path, enforce_finiteness
+            )

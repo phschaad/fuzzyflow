@@ -1,0 +1,1 @@
+{"_subgraph":{"0":6},"expr_index":0,"sdfg_id":0,"state_id":-1,"transformation":"StateAssignElimination","type":"PatternTransformation","docstring":"\n    State assign elimination removes all assignments into the final state\n    and subsumes the assigned value into its contents.\n    "}

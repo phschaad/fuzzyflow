@@ -1,0 +1,1 @@
+{"_subgraph":{"0":0},"expr_index":0,"sdfg_id":1,"state_id":258,"transformation":"InlineTransients","type":"PatternTransformation","docstring":"\n    Inlines all transient arrays that are not used anywhere else into a\n    nested SDFG.\n    "}

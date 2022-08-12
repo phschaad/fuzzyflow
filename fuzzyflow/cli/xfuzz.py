@@ -84,7 +84,7 @@ def main():
         xform, sdfg, args.cutout_strategy, args.sampling_strategy
     )
 
-    valid = verifier.verify(args.runs, status=True, enforce_finiteness=False)
+    valid = verifier.verify(args.runs, status=True, enforce_finiteness=True)
 
     print('Transformation is valid' if valid else 'INVALID Transformation!')
 

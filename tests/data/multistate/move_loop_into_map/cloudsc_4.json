@@ -1,0 +1,1 @@
+{"_subgraph":{"0":230,"1":231,"2":232},"expr_index":0,"sdfg_id":1,"state_id":-1,"transformation":"MoveLoopIntoMap","type":"PatternTransformation","docstring":"\n    Moves a loop around a map into the map\n    "}
