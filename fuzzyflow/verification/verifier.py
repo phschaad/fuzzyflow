@@ -3,18 +3,23 @@
 # License. For details, see the LICENSE file.
 
 from copy import deepcopy
-from typing import List, Union
+from typing import Dict, List, Union
 import numpy as np
 
 from alive_progress import alive_bar
+from dace import config as dcfg
 from dace.codegen.compiled_sdfg import CompiledSDFG
-from dace.sdfg import SDFG
+from dace.sdfg import SDFG, SDFGState
 from dace.sdfg import nodes as nd
 from dace.transformation.transformation import (PatternTransformation,
                                                 SubgraphTransformation)
+from dace.optimization.utils import subprocess_measure
 
-from fuzzyflow.cutout import CutoutStrategy, find_cutout_for_transformation
-from fuzzyflow.util import apply_transformation
+from fuzzyflow.cutout import (CutoutStrategy,
+                              find_cutout_for_transformation,
+                              find_program_parameters)
+from fuzzyflow.subprocess import run_subprocess, run_subprocess_precompiled
+from fuzzyflow.util import apply_transformation, processify
 from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
 
 
@@ -26,6 +31,9 @@ class TransformationVerifier:
     sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM
 
     _cutout: SDFG = None
+    _cutout_translation_dict: Dict[
+        Union[nd.Node, SDFGState], Union[nd.Node, SDFGState]
+    ] = None
 
     def __init__(
         self,
@@ -51,31 +59,37 @@ class TransformationVerifier:
         if self._cutout is None or recut:
             if status:
                 print('Finding ideal cutout')
-            self._cutout = find_cutout_for_transformation(
+            self._cutout, self._cutout_translation_dict = find_cutout_for_transformation(
                 self.sdfg, self.xform, self.cutout_strategy
             )
 
-            in_nodes: List[nd.AccessNode] = self._cutout.input_arrays()
-            for in_node in in_nodes:
-                self._cutout.arrays[in_node.data].transient = False
-            out_nodes: List[nd.AccessNode] = self._cutout.output_arrays()
-            for out_node in out_nodes:
-                self._cutout.arrays[out_node.data].transient = False
+            #in_nodes: List[nd.AccessNode] = self._cutout.input_arrays()
+            #for in_node in in_nodes:
+            #    self._cutout.arrays[in_node.data].transient = False
+            #out_nodes: List[nd.AccessNode] = self._cutout.output_arrays()
+            #for out_node in out_nodes:
+            #    self._cutout.arrays[out_node.data].transient = False
             if status:
                 print('Cutout obtained')
 
         return self._cutout
 
 
-    def verify(
+    def _run_verify(
         self, n_samples: int = 1, status: bool = False,
         debug_save_path: str = None, enforce_finiteness: bool = False
     ) -> bool:
         cutout = self.cutout(status=status)
+        orig_in_containers, orig_out_containers = find_program_parameters(
+            cutout, self.sdfg, self._cutout_translation_dict
+        )
         original_cutout = deepcopy(cutout)
         if status:
             print('Applying transformation')
         apply_transformation(cutout, self.xform)
+        xformed_in_containers, xformed_out_containers = find_program_parameters(
+            cutout, self.sdfg, self._cutout_translation_dict
+        )
 
         if debug_save_path is not None:
             original_cutout.save(debug_save_path + '_orig.sdfg')
@@ -107,7 +121,8 @@ class TransformationVerifier:
                     original_cutout
                 )
                 inputs = sampler.sample_inputs_for(
-                    original_cutout, symbols_map, decay_by=decay_by
+                    original_cutout, orig_in_containers, symbols_map,
+                    decay_by=decay_by
                 )
                 out_orig = sampler.generate_output_containers_for(
                     original_cutout, symbols_map
@@ -123,8 +138,8 @@ class TransformationVerifier:
                 for k in out_orig.keys():
                     if not k in orig_containers:
                         orig_containers[k] = out_orig[k]
-                prog_orig.__call__(
-                    **orig_containers, **free_symbols_map
+                ret_orig = run_subprocess(
+                    original_cutout, orig_containers, free_symbols_map
                 )
 
                 xformed_containers = dict()
@@ -134,9 +149,12 @@ class TransformationVerifier:
                 for k in out_xformed.keys():
                     if not k in xformed_containers:
                         xformed_containers[k] = out_xformed[k]
-                prog_xformed.__call__(
-                    **xformed_containers, **free_symbols_map
+                ret_xformed = run_subprocess(
+                    cutout, xformed_containers, free_symbols_map
                 )
+
+                if ret_orig != ret_xformed:
+                    return False
 
                 resample = False
                 for k in orig_containers.keys():
@@ -188,3 +206,26 @@ class TransformationVerifier:
                     )
 
         return True
+
+
+    def verify(
+        self, n_samples: int = 1, status: bool = False,
+        debug_save_path: str = None, enforce_finiteness: bool = False
+    ) -> bool:
+        with dcfg.temporary_config():
+            dcfg.Config.set(
+                'compiler', 'cpu', 'args',
+                value='-std=c++14 -fPIC -Wall -Wextra -O2 ' +
+                '-Wno-unused-parameter -Wno-unused-label'
+            )
+            dcfg.Config.set('profiling', value=False)
+            dcfg.Config.set('debugprint', value=False)
+            dcfg.Config.set('compiler', 'allow_view_arguments', value=True)
+            return self._run_verify(
+                n_samples, status, debug_save_path, enforce_finiteness
+            )
+
+
+@processify
+def _call_prog(program: CompiledSDFG, **kwargs):
+    program.__call__(**kwargs)

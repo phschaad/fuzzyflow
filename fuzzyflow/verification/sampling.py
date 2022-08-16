@@ -163,8 +163,8 @@ class DataSampler:
 
 
     def sample_inputs_for(
-        self, sdfg: SDFG, symbols_map: Dict[str, int] = None,
-        decay_by: int = 0
+        self, sdfg: SDFG, input_containers: Set[str],
+        symbols_map: Dict[str, int] = None, decay_by: int = 0
     ) -> Dict[str, np.ndarray]:
         if symbols_map is None:
             symbols_map = self.sample_symbols_map_for(sdfg)
