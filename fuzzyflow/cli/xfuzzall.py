@@ -4,6 +4,8 @@
 
 import argparse
 import os
+from typing import List
+import warnings
 
 from dace.sdfg import SDFG
 from dace.transformation.passes.pattern_matching import match_patterns
@@ -14,7 +16,7 @@ import dace.transformation.passes as passes
 
 from fuzzyflow import cutout
 from fuzzyflow.verification.sampling import SamplingStrategy
-from fuzzyflow.verification.verifier import TransformationVerifier
+from fuzzyflow.verification.verifier import StatusLevel, TransformationVerifier
 
 def main():
     parser = argparse.ArgumentParser(
@@ -64,19 +66,36 @@ def main():
     sdfg = SDFG.from_file(sdfg_path)
     sdfg.validate()
 
-    matches = list(match_patterns(sdfg, dxf.DeduplicateAccess))
+    matches: List[dxf.AugAssignToWCR] = list(
+        match_patterns(sdfg, dxf.AugAssignToWCR)
+    )
     n_matches = len(matches)
     print('Found', str(n_matches), 'matches')
 
+    warnings.filterwarnings(
+        'ignore', message='.*already loaded, renaming file.*'
+    )
+
     i = 1
+    invalid = set()
     for match in matches:
         print('Testing match', i, 'of', str(n_matches))
         verifier = TransformationVerifier(
             match, sdfg, args.cutout_strategy, args.sampling_strategy
         )
-        valid = verifier.verify(args.runs, status=False, enforce_finiteness=True)
+        valid = verifier.verify(
+            args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True
+        )
         print('Transformation is valid' if valid else 'INVALID Transformation!')
+        if not valid:
+            invalid.add(i)
         i += 1
+
+    if len(invalid) > 0:
+        print('Invalid were the following', len(invalid), 'instances:')
+        std_invalid = list(invalid).sort()
+        for i in std_invalid:
+            print(i)
 
 
 if __name__ == '__main__':

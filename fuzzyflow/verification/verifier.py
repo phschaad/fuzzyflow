@@ -2,10 +2,10 @@
 # This file is part of FuzzyFlow, which is released under the BSD 3-Clause
 # License. For details, see the LICENSE file.
 
-from alive_progress import alive_bar
 from copy import deepcopy
 from typing import List, Union
 import numpy as np
+from tqdm import tqdm
 
 from dace import config, dtypes
 from dace.codegen.compiled_sdfg import CompiledSDFG
@@ -17,7 +17,7 @@ from dace.transformation.transformation import (PatternTransformation,
 
 from fuzzyflow.cutout import CutoutStrategy, TranslationDict, cutout_determine_input_config, cutout_determine_system_state, find_cutout_for_transformation
 from fuzzyflow.runner import run_subprocess_precompiled
-from fuzzyflow.util import apply_transformation
+from fuzzyflow.util import StatusLevel, apply_transformation
 from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
 
 
@@ -45,7 +45,8 @@ class TransformationVerifier:
 
 
     def cutout(
-        self, strategy: CutoutStrategy = None, status: bool = False
+        self, strategy: CutoutStrategy = None,
+        status: StatusLevel = StatusLevel.OFF
     ) -> SDFG:
         recut = False
         if strategy is not None and strategy != self.cutout_strategy:
@@ -53,7 +54,7 @@ class TransformationVerifier:
             recut = True
 
         if self._cutout is None or recut:
-            if status:
+            if status >= StatusLevel.DEBUG:
                 print('Finding ideal cutout')
             (
                 self._cutout, self._translation_dict
@@ -67,14 +68,14 @@ class TransformationVerifier:
             out_nodes: List[nd.AccessNode] = self._cutout.output_arrays()
             for out_node in out_nodes:
                 self._cutout.arrays[out_node.data].transient = False
-            if status:
+            if status >= StatusLevel.DEBUG:
                 print('Cutout obtained')
 
         return self._cutout
 
 
     def _do_verify(
-        self, n_samples: int = 1, status: bool = False,
+        self, n_samples: int = 1, status: StatusLevel = StatusLevel.OFF,
         debug_save_path: str = None, enforce_finiteness: bool = False
     ) -> bool:
         cutout = self.cutout(status=status)
@@ -86,7 +87,7 @@ class TransformationVerifier:
         )
 
         original_cutout = deepcopy(cutout)
-        if status:
+        if status >= StatusLevel.DEBUG:
             print('Applying transformation')
         apply_transformation(cutout, self.xform)
         for dat in system_state:
@@ -121,13 +122,13 @@ class TransformationVerifier:
             )
             return False
 
-        if status:
+        if status >= StatusLevel.DEBUG:
             print('Compiling pre-transformation cutout')
         prog_orig: CompiledSDFG = original_cutout.compile()
-        if status:
+        if status >= StatusLevel.DEBUG:
             print('Compiling post-transformation cutout')
         prog_xformed: CompiledSDFG = cutout.compile()
-        if status:
+        if status >= StatusLevel.DEBUG:
             print(
                 'Verifying transformation over', n_samples,
                 'sampling run' + ('s' if n_samples > 1 else '')
@@ -136,31 +137,42 @@ class TransformationVerifier:
         seed = 12121
         sampler = DataSampler(self.sampling_strategy, seed)
 
-        with alive_bar(n_samples, disable=(not status)) as bar:
+        with tqdm(total=n_samples, disable=(status == StatusLevel.OFF)) as bar:
             i = 0
             resample_attempt = 0
             decay_by = 0
             decays = []
+            n_crashes = 0
             full_resampling_failures = 0
             while i < n_samples:
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Sampling symbols')
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                     original_cutout
                 )
 
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Sampling inputs')
                 inputs = sampler.sample_inputs(
                     original_cutout, original_input_configuration, symbols_map,
                     decay_by
                 )
 
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Duplicating inputs for post-transformation cutout')
                 inputs_xformed = dict()
                 for k, v in inputs.items():
                     if k in xformed_input_configuration:
                         inputs_xformed[k] = deepcopy(v)
 
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Generating outputs for pre-transformation cutout')
                 out_orig = sampler.generate_output_containers(
                     original_cutout, system_state, original_input_configuration,
                     symbols_map
                 )
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Generating outputs for post-transformation cutout')
                 out_xformed = sampler.generate_output_containers(
                     cutout, system_state, xformed_input_configuration,
                     symbols_map
@@ -173,14 +185,13 @@ class TransformationVerifier:
                 for k in out_orig.keys():
                     if not k in orig_containers:
                         orig_containers[k] = out_orig[k]
-                '''
-                prog_orig.__call__(
-                    **orig_containers, **free_symbols_map
-                )
-                '''
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Running pre-transformation cutout in a subprocess')
                 ret_orig = run_subprocess_precompiled(
                     prog_orig, orig_containers, free_symbols_map
                 )
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Collecting pre-transformation cutout data reports')
                 orig_drep = original_cutout.get_instrumented_data()
 
                 xformed_containers = dict()
@@ -192,17 +203,21 @@ class TransformationVerifier:
                     if k in cutout.arrays:
                         if not k in xformed_containers:
                             xformed_containers[k] = out_xformed[k]
-                '''
-                prog_xformed.__call__(
-                    **xformed_containers, **free_symbols_map
-                )
-                '''
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Running post-transformation cutout in a subprocess')
                 ret_xformed = run_subprocess_precompiled(
                     prog_xformed, xformed_containers, free_symbols_map
                 )
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Collecting post-transformation cutout data reports')
                 xformed_drep = cutout.get_instrumented_data()
 
-                if ret_orig != ret_xformed:
+                if status >= StatusLevel.VERBOSE:
+                    bar.write('Comparing results')
+                if ((ret_orig != 0 and ret_xformed == 0) or
+                    (ret_orig == 0 and ret_xformed != 0)):
+                    if status >= StatusLevel.VERBOSE:
+                        bar.write('One cutout failed to run, the other ran!')
                     return False
                 elif ret_orig == 0 and ret_xformed == 0:
                     resample = False
@@ -218,13 +233,19 @@ class TransformationVerifier:
                                 nval = inputs[dat]
 
                         if enforce_finiteness and not np.isfinite(oval).all():
+                            if status >= StatusLevel.VERBOSE:
+                                bar.write('Non-finite results, resampling')
                             resample = True
 
                         if isinstance(oval, np.ndarray):
                             if not np.allclose(oval, nval, equal_nan=True):
+                                if status >= StatusLevel.VERBOSE:
+                                    bar.write('Result mismatch!')
                                 return False
                         else:
                             if not np.allclose([oval], [nval], equal_nan=True):
+                                if status >= StatusLevel.VERBOSE:
+                                    bar.write('Result mismatch!')
                                 return False
 
                     if not resample or resample_attempt > 11:
@@ -234,8 +255,8 @@ class TransformationVerifier:
                         if enforce_finiteness and decay_by > 0:
                             decays.append(decay_by)
                         decay_by = 0
-                        bar()
                         i += 1
+                        bar.update(1)
                     else:
                         if resample_attempt >= 2:
                             if decay_by == 0:
@@ -243,6 +264,16 @@ class TransformationVerifier:
                             else:
                                 decay_by *= 2
                         resample_attempt += 1
+                else:
+                    if status >= StatusLevel.VERBOSE:
+                        bar.write('Both cutouts crashed')
+                    n_crashes += 1
+                    if resample_attempt > 11:
+                        full_resampling_failures += 1
+                    resample_attempt = 0
+                    decay_by = 0
+                    i += 1
+                    bar.update(1)
             n_decayed = len(decays)
             if enforce_finiteness and n_decayed > 0:
                 print(
@@ -256,12 +287,17 @@ class TransformationVerifier:
                         str((2 ** -512)), str(full_resampling_failures),
                         'times'
                     )
+            if n_crashes > 0:
+                print(
+                    str(n_crashes), 'trials out of ', str(n_samples),
+                    'caused crashes'
+                )
 
         return True
 
 
     def verify(
-        self, n_samples: int = 1, status: bool = False,
+        self, n_samples: int = 1, status: StatusLevel = StatusLevel.OFF,
         debug_save_path: str = None, enforce_finiteness: bool = False
     ) -> bool:
         with config.temporary_config():

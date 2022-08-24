@@ -575,7 +575,9 @@ def cutout_determine_input_config(
         if original_state is None:
             raise KeyError('Could not find state in translation')
         for k, v in state_reach.items():
-            if k not in cutout_states and original_state in v:
+            if ((k not in translation_dict or
+                 translation_dict[k] not in cutout_states)
+                 and original_state in v):
                 inverse_cutout_reach.add(k)
 
         # If the cutout consists of only one state, we need to check inside the
@@ -647,7 +649,8 @@ def cutout_determine_system_state(
         if original_state is None:
             raise KeyError('Could not find state in translation')
         for rstate in state_reach[original_state]:
-            if rstate not in cutout_states:
+            if (rstate not in translation_dict or
+                translation_dict[rstate] not in cutout_states):
                 cutout_reach.add(rstate)
 
         # If the cutout consists of only one state, we need to check inside the

@@ -2,6 +2,8 @@
 # This file is part of FuzzyFlow, which is released under the BSD 3-Clause
 # License. For details, see the LICENSE file.
 
+from enum import Enum
+from functools import total_ordering
 import json
 from typing import Dict, Set, Tuple, Union
 
@@ -13,7 +15,20 @@ from dace.transformation.transformation import (PatternTransformation,
                                                 SingleStateTransformation,
                                                 MultiStateTransformation,
                                                 SubgraphTransformation)
-from dace.transformation.interstate import LoopToMap, MoveLoopIntoMap
+from dace.transformation.interstate.loop_detection import DetectLoop
+
+
+@total_ordering
+class StatusLevel(Enum):
+    OFF = 0
+    BAR_ONLY = 1
+    DEBUG = 2
+    VERBOSE = 3
+
+    def __lt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value < other.value
+        raise ValueError('Cannot compare StatusLevel to', str(other.__class__))
 
 
 def transformation_get_affected_nodes(
@@ -27,7 +42,7 @@ def transformation_get_affected_nodes(
 
     affected_nodes: Set[Union[nd.Node, SDFGState]] = set()
     if isinstance(xform, PatternTransformation):
-        if isinstance(xform, LoopToMap) or isinstance(xform, MoveLoopIntoMap):
+        if isinstance(xform, DetectLoop):
             to_visit = [xform.loop_begin]
             while to_visit:
                 state = to_visit.pop(0)

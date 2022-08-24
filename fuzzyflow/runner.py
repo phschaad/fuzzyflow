@@ -13,11 +13,15 @@ from dace.sdfg import SDFG
 from dace.data import make_array_from_descriptor, Array, Scalar
 from dace.libraries.standard.memory import aligned_ndarray
 
+from fuzzyflow.util import StatusLevel
+
 
 def run_subprocess_precompiled(
     program: CompiledSDFG, containers: Dict[str, Union[np.ndarray, np.number]],
-    symbols: Dict[str, Any]
+    symbols: Dict[str, Any], status: StatusLevel = StatusLevel.OFF
 ) -> int:
+    if status >= StatusLevel.VERBOSE:
+        print('Serializing containers')
     containers_serialized = dict()
     for k, v in containers.items():
         if isinstance(v, np.ndarray):
@@ -35,11 +39,18 @@ def run_subprocess_precompiled(
             sdfg.name,
             containers_serialized,
             symbols,
+            status
         )
     )
 
+    if status >= StatusLevel.VERBOSE:
+        print('Launching runner')
     process.start()
+    if status >= StatusLevel.VERBOSE:
+        print('Waiting for runner')
     process.join()
+    if status >= StatusLevel.VERBOSE:
+        print('Runner joined')
 
     if process.exitcode != 0:
         print('Error occured in execution')
@@ -55,14 +66,22 @@ def run_subprocess_precompiled(
 def _subprocess_runner_precompiled(
     sdfg_json: object, argnames: List[str], filename: str, name: str,
     containers_serialized: Dict[str, list],
-    symbols: Dict[str, int]
+    symbols: Dict[str, int], status: StatusLevel = StatusLevel.OFF
 ) -> None:
+    if status >= StatusLevel.VERBOSE:
+        print('Runner started, deserializing SDFG', flush=True)
     sdfg = SDFG.from_json(sdfg_json)
+    if status >= StatusLevel.VERBOSE:
+        print('Loading library', flush=True)
     lib = ReloadableDLL(filename, name)
+    if status >= StatusLevel.VERBOSE:
+        print('Loading compiled SDFG', flush=True)
     program = CompiledSDFG(sdfg, lib, argnames)
 
     containers: Dict[str, Union[np.number, np.ndarray]] = dict()
 
+    if status >= StatusLevel.VERBOSE:
+        print('Deserializing continers', flush=True)
     for k, v in containers_serialized.items():
         array = sdfg.arrays[k]
         if isinstance(array, Scalar):
@@ -74,7 +93,11 @@ def _subprocess_runner_precompiled(
             else:
                 containers[k] = view
 
+    if status >= StatusLevel.VERBOSE:
+        print('Executing compiled SDFG', flush=True)
     program.__call__(**containers, **symbols)
+    if status >= StatusLevel.VERBOSE:
+        print('Execution completed, runner exiting', flush=True)
     exit(0)
 
 
