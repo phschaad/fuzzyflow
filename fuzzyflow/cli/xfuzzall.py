@@ -9,6 +9,8 @@ from dace.sdfg import SDFG
 from dace.transformation.passes.pattern_matching import match_patterns
 import dace.transformation.dataflow as dxf
 import dace.transformation.interstate as ixf
+import dace.transformation.subgraph as sxf
+import dace.transformation.passes as passes
 
 from fuzzyflow import cutout
 from fuzzyflow.verification.sampling import SamplingStrategy
@@ -62,7 +64,7 @@ def main():
     sdfg = SDFG.from_file(sdfg_path)
     sdfg.validate()
 
-    matches = list(match_patterns(sdfg, ixf.RefineNestedAccess))
+    matches = list(match_patterns(sdfg, dxf.DeduplicateAccess))
     n_matches = len(matches)
     print('Found', str(n_matches), 'matches')
 
@@ -72,7 +74,7 @@ def main():
         verifier = TransformationVerifier(
             match, sdfg, args.cutout_strategy, args.sampling_strategy
         )
-        valid = verifier.verify(args.runs, status=True, enforce_finiteness=True)
+        valid = verifier.verify(args.runs, status=False, enforce_finiteness=True)
         print('Transformation is valid' if valid else 'INVALID Transformation!')
         i += 1
 

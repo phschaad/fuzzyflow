@@ -42,8 +42,7 @@ class DataSampler:
 
 
     def _uniform_samling(
-        self, name: str, array: Data, shape: Union[List, Tuple],
-        decay_by: int = 0
+        self, array: Data, shape: Union[List, Tuple], decay_by: int = 0
     ) -> Union[np.ndarray, np.number]:
         npdt = array.dtype.as_numpy_dtype()
         if npdt in [np.float16, np.float32, np.float64]:
@@ -84,66 +83,74 @@ class DataSampler:
             return np.random.rand(*shape)
 
 
-    def _sample_data_for_nodes(
-        self, nodes: List[nd.AccessNode], sdfg: SDFG,
-        symbols_map: Dict[str, int], sample: bool = True,
-        decay_by: int = 0
-    ) -> Dict[str, np.ndarray]:
-        retdict = dict()
-        data: Set[Tuple[str, Data]] = set()
-        for node in nodes:
-            array = sdfg.arrays[node.data]
-            data.add((node.data, array))
-
-        for dat in data:
-            name, array = dat
-            shape = []
-            for x in array.shape:
-                if isinstance(x, symbol):
-                    if x.name in symbols_map:
-                        shape.append(symbols_map[x.name])
-                    else:
-                        raise Exception(
-                            'Can\'t find a definition for symbol', x.name
-                        )
-                elif isinstance(x, Expr):
-                    res = x.subs(symbols_map)
-                    if isinstance(res, Number) and res.is_Integer:
-                        shape.append(int(res))
-                    else:
-                        raise Exception(
-                            'Can\'t evaluate shape expression', x
-                        )
+    def _get_container_shape(
+        self, array: Data, symbols_map: Dict[str, int]
+    ) -> List:
+        shape = []
+        for x in array.shape:
+            if isinstance(x, symbol):
+                if x.name in symbols_map:
+                    shape.append(symbols_map[x.name])
                 else:
-                    shape.append(x)
-            if sample:
-                if self.strategy == SamplingStrategy.SIMPLE_UNIFORM:
-                    newdata = self._uniform_samling(
-                        name, array, shape, decay_by
+                    raise Exception(
+                        'Can\'t find a definition for symbol', x.name
                     )
+            elif isinstance(x, Expr):
+                res = x.subs(symbols_map)
+                if isinstance(res, Number) and res.is_Integer:
+                    shape.append(int(res))
                 else:
-                    raise NotImplementedError()
-            else:
-                if isinstance(array, Scalar):
-                    newdata = 0
-                else:
-                    newdata = np.zeros(shape).astype(
-                        array.dtype.as_numpy_dtype()
+                    raise Exception(
+                        'Can\'t evaluate shape expression', x
                     )
-
-            if isinstance(array, Scalar):
-                retdict[name] = newdata
             else:
-                view: np.ndarray = make_array_from_descriptor(
-                    array, newdata, symbols_map
-                )
-                if isinstance(array, Array) and array.alignment:
-                    aligned = aligned_ndarray(view, array.alignment)
-                    retdict[name] = aligned
-                else:
-                    retdict[name] = view
+                shape.append(x)
+        return shape
 
-        return retdict
+
+    def _sample_container(
+        self, array: Data, symbols_map: Dict[str, int], decay_by: int = 0
+    ) -> np.ndarray:
+        shape = self._get_container_shape(array, symbols_map)
+        newdata = None
+        if self.strategy == SamplingStrategy.SIMPLE_UNIFORM:
+            newdata = self._uniform_samling(array, shape, decay_by)
+        else:
+            raise NotImplementedError()
+
+        if isinstance(array, Scalar):
+            return newdata
+        else:
+            return self._align_container(array, symbols_map, newdata)
+
+
+    def _empty_container(
+        self, array: Data, symbols_map: Dict[str, int]
+    ) -> Union[int, float, np.ndarray]:
+        shape = self._get_container_shape(array, symbols_map)
+        if isinstance(array, Scalar):
+            npdt = array.dtype.as_numpy_dtype()
+            if npdt in [np.float16, np.float32, np.float64]:
+                return 0.0
+            else:
+                return 0
+        else:
+            empty_container = np.zeros(shape).astype(
+                array.dtype.as_numpy_dtype()
+            )
+            return self._align_container(array, symbols_map, empty_container)
+
+
+    def _align_container(
+        self,  array: Data, symbols_map: Dict[str, int], container: np.ndarray
+    ) -> np.ndarray:
+        view: np.ndarray = make_array_from_descriptor(
+            array, container, symbols_map
+        )
+        if isinstance(array, Array) and array.alignment:
+            return aligned_ndarray(view, array.alignment)
+        else:
+            return view
 
 
     def sample_symbols_map_for(
@@ -162,29 +169,26 @@ class DataSampler:
         return symbol_map, free_symbols_map
 
 
-    def sample_inputs_for(
-        self, sdfg: SDFG, symbols_map: Dict[str, int] = None,
-        decay_by: int = 0
-    ) -> Dict[str, np.ndarray]:
-        if symbols_map is None:
-            symbols_map = self.sample_symbols_map_for(sdfg)
-
-        in_nodes = sdfg.input_arrays()
-        for s in sdfg.states():
-            for dn in s.data_nodes():
-                if not sdfg.arrays[dn.data].transient and not dn in in_nodes:
-                    in_nodes.append(dn)
-
-        return self._sample_data_for_nodes(
-            in_nodes, sdfg, symbols_map, sample=True, decay_by=decay_by
-        )
+    def sample_inputs(
+        self, sdfg: SDFG, input_configuration: Set[str],
+        symbols_map: Dict[str, int], decay_by: int = 0
+    ) -> Dict[str, Union[float, int, np.ndarray]]:
+        inputs = dict()
+        for name in input_configuration:
+            array = sdfg.arrays[name]
+            container = self._sample_container(array, symbols_map, decay_by)
+            inputs[name] = container
+        return inputs
 
 
-    def generate_output_containers_for(
-        self, sdfg: SDFG, symbols_map: Dict[str, int] = None
-    ) -> Dict[str, np.ndarray]:
-        if symbols_map is None:
-            symbols_map = self.sample_symbols_map_for(sdfg)
-        return self._sample_data_for_nodes(
-            sdfg.output_arrays(), sdfg, symbols_map, sample=False
-        )
+    def generate_output_containers(
+        self, sdfg: SDFG, system_state: Set[str], input_configuration: Set[str],
+        symbols_map: Dict[str, int]
+    ) -> Dict[str, Union[float, int, np.ndarray]]:
+        outputs = dict()
+        for name in system_state:
+            if not name in input_configuration:
+                array = sdfg.arrays[name]
+                container = self._empty_container(array, symbols_map)
+                outputs[name] = container
+        return outputs

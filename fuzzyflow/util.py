@@ -13,6 +13,7 @@ from dace.transformation.transformation import (PatternTransformation,
                                                 SingleStateTransformation,
                                                 MultiStateTransformation,
                                                 SubgraphTransformation)
+from dace.transformation.interstate import LoopToMap, MoveLoopIntoMap
 
 
 def transformation_get_affected_nodes(
@@ -26,7 +27,27 @@ def transformation_get_affected_nodes(
 
     affected_nodes: Set[Union[nd.Node, SDFGState]] = set()
     if isinstance(xform, PatternTransformation):
-        affected_nodes = xform.affected_nodes()
+        if isinstance(xform, LoopToMap) or isinstance(xform, MoveLoopIntoMap):
+            to_visit = [xform.loop_begin]
+            while to_visit:
+                state = to_visit.pop(0)
+                for _, dst, _ in state.parent.out_edges(state):
+                    if dst not in affected_nodes and dst is not xform.loop_guard:
+                        to_visit.append(dst)
+                affected_nodes.add(state)
+
+            affected_nodes.add(xform.loop_guard)
+            affected_nodes.add(xform.exit_state)
+            for iedge in xform.loop_begin.parent.in_edges(xform.loop_guard):
+                if iedge.src not in affected_nodes:
+                    affected_nodes.add(iedge.src)
+        else:
+            for k, _ in xform._get_pattern_nodes().items():
+                try:
+                    affected_nodes.add(getattr(xform, k))
+                except KeyError:
+                    # Ignored.
+                    pass
     elif isinstance(xform, SubgraphTransformation):
         sgv = xform.get_subgraph(sdfg)
         if isinstance(sgv, StateSubgraphView):

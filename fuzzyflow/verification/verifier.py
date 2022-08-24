@@ -7,14 +7,16 @@ from copy import deepcopy
 from typing import List, Union
 import numpy as np
 
-from dace import config
+from dace import config, dtypes
 from dace.codegen.compiled_sdfg import CompiledSDFG
+from dace.data import Scalar
 from dace.sdfg import SDFG
 from dace.sdfg import nodes as nd
 from dace.transformation.transformation import (PatternTransformation,
                                                 SubgraphTransformation)
 
-from fuzzyflow.cutout import CutoutStrategy, find_cutout_for_transformation
+from fuzzyflow.cutout import CutoutStrategy, TranslationDict, cutout_determine_input_config, cutout_determine_system_state, find_cutout_for_transformation
+from fuzzyflow.runner import run_subprocess_precompiled
 from fuzzyflow.util import apply_transformation
 from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
 
@@ -27,6 +29,7 @@ class TransformationVerifier:
     sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM
 
     _cutout: SDFG = None
+    _translation_dict: TranslationDict = None
 
     def __init__(
         self,
@@ -52,7 +55,9 @@ class TransformationVerifier:
         if self._cutout is None or recut:
             if status:
                 print('Finding ideal cutout')
-            self._cutout = find_cutout_for_transformation(
+            (
+                self._cutout, self._translation_dict
+            ) = find_cutout_for_transformation(
                 self.sdfg, self.xform, self.cutout_strategy
             )
 
@@ -73,14 +78,48 @@ class TransformationVerifier:
         debug_save_path: str = None, enforce_finiteness: bool = False
     ) -> bool:
         cutout = self.cutout(status=status)
+        system_state = cutout_determine_system_state(
+            cutout, self.sdfg, self._translation_dict
+        )
+        original_input_configuration = cutout_determine_input_config(
+            cutout, self.sdfg, self._translation_dict
+        )
+
         original_cutout = deepcopy(cutout)
         if status:
             print('Applying transformation')
         apply_transformation(cutout, self.xform)
+        for dat in system_state:
+            if dat not in cutout.arrays.keys():
+                print('Warning: Transformation removed something from system state!')
+                orig_array = original_cutout.arrays[dat]
+                cutout.add_datadesc(dat, orig_array)
+
+        xformed_input_configuration = cutout_determine_input_config(
+            cutout, self.sdfg, self._translation_dict, system_state
+        )
+
+        # Instrumentation
+        for s in cutout.states():
+            for dn in s.data_nodes():
+                if dn.data in system_state:
+                    dn.instrument = dtypes.DataInstrumentationType.Save
+        for s in original_cutout.states():
+            for dn in s.data_nodes():
+                if dn.data in system_state:
+                    dn.instrument = dtypes.DataInstrumentationType.Save
 
         if debug_save_path is not None:
             original_cutout.save(debug_save_path + '_orig.sdfg')
             cutout.save(debug_save_path + '_xformed.sdfg')
+
+        if not xformed_input_configuration.issubset(
+            original_input_configuration
+        ):
+            print(
+                'Failed due to invalid input configuration after transforming!'
+            )
+            return False
 
         if status:
             print('Compiling pre-transformation cutout')
@@ -107,15 +146,24 @@ class TransformationVerifier:
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                     original_cutout
                 )
-                inputs = sampler.sample_inputs_for(
-                    original_cutout, symbols_map, decay_by=decay_by
+
+                inputs = sampler.sample_inputs(
+                    original_cutout, original_input_configuration, symbols_map,
+                    decay_by
                 )
-                inputs_xformed = deepcopy(inputs)
-                out_orig = sampler.generate_output_containers_for(
-                    original_cutout, symbols_map
+
+                inputs_xformed = dict()
+                for k, v in inputs.items():
+                    if k in xformed_input_configuration:
+                        inputs_xformed[k] = deepcopy(v)
+
+                out_orig = sampler.generate_output_containers(
+                    original_cutout, system_state, original_input_configuration,
+                    symbols_map
                 )
-                out_xformed = sampler.generate_output_containers_for(
-                    cutout, symbols_map
+                out_xformed = sampler.generate_output_containers(
+                    cutout, system_state, xformed_input_configuration,
+                    symbols_map
                 )
 
                 orig_containers = dict()
@@ -125,58 +173,76 @@ class TransformationVerifier:
                 for k in out_orig.keys():
                     if not k in orig_containers:
                         orig_containers[k] = out_orig[k]
-                pass
+                '''
                 prog_orig.__call__(
                     **orig_containers, **free_symbols_map
                 )
+                '''
+                ret_orig = run_subprocess_precompiled(
+                    prog_orig, orig_containers, free_symbols_map
+                )
+                orig_drep = original_cutout.get_instrumented_data()
 
                 xformed_containers = dict()
                 for k in inputs.keys():
-                    if not k in xformed_containers:
-                        xformed_containers[k] = inputs_xformed[k]
+                    if k in cutout.arrays:
+                        if not k in xformed_containers:
+                            xformed_containers[k] = inputs_xformed[k]
                 for k in out_xformed.keys():
-                    if not k in xformed_containers:
-                        xformed_containers[k] = out_xformed[k]
-                pass
+                    if k in cutout.arrays:
+                        if not k in xformed_containers:
+                            xformed_containers[k] = out_xformed[k]
+                '''
                 prog_xformed.__call__(
                     **xformed_containers, **free_symbols_map
                 )
+                '''
+                ret_xformed = run_subprocess_precompiled(
+                    prog_xformed, xformed_containers, free_symbols_map
+                )
+                xformed_drep = cutout.get_instrumented_data()
 
-                resample = False
-                for k in orig_containers.keys():
-                    # Skip any containers that don't exist in the new cutout
-                    # TODO: This is probably not how we should do it...
-                    if k not in xformed_containers:
-                        continue
-                    oval = orig_containers[k]
-                    nval = xformed_containers[k]
+                if ret_orig != ret_xformed:
+                    return False
+                elif ret_orig == 0 and ret_xformed == 0:
+                    resample = False
+                    for dat in system_state:
 
-                    if enforce_finiteness and not np.isfinite(oval).all():
-                        resample = True
-
-                    if isinstance(oval, np.ndarray):
-                        if not np.allclose(oval, nval, equal_nan=True):
-                            return False
-                    else:
-                        if not np.allclose([oval], [nval], equal_nan=True):
-                            return False
-
-                if not resample or resample_attempt > 11:
-                    if resample_attempt > 11:
-                        full_resampling_failures += 1
-                    resample_attempt = 0
-                    if enforce_finiteness and decay_by > 0:
-                        decays.append(decay_by)
-                    decay_by = 0
-                    bar()
-                    i += 1
-                else:
-                    if resample_attempt >= 2:
-                        if decay_by == 0:
-                            decay_by = 1
+                        oval = orig_drep.get_latest_version(dat)
+                        if dat in xformed_drep.files:
+                            nval = xformed_drep.get_latest_version(dat)
                         else:
-                            decay_by *= 2
-                    resample_attempt += 1
+                            if isinstance(cutout.arrays[dat], Scalar):
+                                nval = [inputs[dat]]
+                            else:
+                                nval = inputs[dat]
+
+                        if enforce_finiteness and not np.isfinite(oval).all():
+                            resample = True
+
+                        if isinstance(oval, np.ndarray):
+                            if not np.allclose(oval, nval, equal_nan=True):
+                                return False
+                        else:
+                            if not np.allclose([oval], [nval], equal_nan=True):
+                                return False
+
+                    if not resample or resample_attempt > 11:
+                        if resample_attempt > 11:
+                            full_resampling_failures += 1
+                        resample_attempt = 0
+                        if enforce_finiteness and decay_by > 0:
+                            decays.append(decay_by)
+                        decay_by = 0
+                        bar()
+                        i += 1
+                    else:
+                        if resample_attempt >= 2:
+                            if decay_by == 0:
+                                decay_by = 1
+                            else:
+                                decay_by *= 2
+                        resample_attempt += 1
             n_decayed = len(decays)
             if enforce_finiteness and n_decayed > 0:
                 print(
@@ -209,6 +275,7 @@ class TransformationVerifier:
             config.Config.set('compiler', 'allow_view_arguments', value=True)
             config.Config.set('profiling', value=False)
             config.Config.set('debugprint', value=False)
+            config.Config.set('cache', value='hash')
             return self._do_verify(
                 n_samples, status, debug_save_path, enforce_finiteness
             )
