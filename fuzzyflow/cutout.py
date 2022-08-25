@@ -577,12 +577,14 @@ def cutout_determine_input_config(
         for k, v in state_reach.items():
             if ((k not in translation_dict or
                  translation_dict[k] not in cutout_states)
-                 and original_state in v):
+                 and original_state is not None and original_state in v):
                 inverse_cutout_reach.add(k)
 
         # If the cutout consists of only one state, we need to check inside the
         # same state of the original SDFG as well.
         if len(cutout_states) == 1:
+            if original_state is None:
+                raise KeyError('Could not find state in translation')
             for dn in original_state.data_nodes():
                 if original_state.in_degree(dn) > 0:
                     iedges = original_state.in_edges(dn)

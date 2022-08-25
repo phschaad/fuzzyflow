@@ -3,7 +3,7 @@
 # License. For details, see the LICENSE file.
 
 from copy import deepcopy
-from typing import List, Union
+from typing import Dict, List, Union
 import numpy as np
 from tqdm import tqdm
 
@@ -14,10 +14,15 @@ from dace.sdfg import SDFG
 from dace.sdfg import nodes as nd
 from dace.transformation.transformation import (PatternTransformation,
                                                 SubgraphTransformation)
+from dace.symbolic import pystr_to_symbolic
 
-from fuzzyflow.cutout import CutoutStrategy, TranslationDict, cutout_determine_input_config, cutout_determine_system_state, find_cutout_for_transformation
+from fuzzyflow.cutout import (CutoutStrategy,
+                              TranslationDict,
+                              cutout_determine_input_config,
+                              cutout_determine_system_state,
+                              find_cutout_for_transformation)
 from fuzzyflow.runner import run_subprocess_precompiled
-from fuzzyflow.util import StatusLevel, apply_transformation
+from fuzzyflow.util import StatusLevel, apply_transformation, cutout_determine_symbol_constraints
 from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
 
 
@@ -76,9 +81,11 @@ class TransformationVerifier:
 
     def _do_verify(
         self, n_samples: int = 1, status: StatusLevel = StatusLevel.OFF,
-        debug_save_path: str = None, enforce_finiteness: bool = False
+        debug_save_path: str = None, enforce_finiteness: bool = False,
+        symbol_constraints: Dict = None, data_constraints: Dict = None
     ) -> bool:
         cutout = self.cutout(status=status)
+
         system_state = cutout_determine_system_state(
             cutout, self.sdfg, self._translation_dict
         )
@@ -92,7 +99,10 @@ class TransformationVerifier:
         apply_transformation(cutout, self.xform)
         for dat in system_state:
             if dat not in cutout.arrays.keys():
-                print('Warning: Transformation removed something from system state!')
+                print(
+                    'Warning: Transformation removed something from system ' +
+                    'state!'
+                )
                 orig_array = original_cutout.arrays[dat]
                 cutout.add_datadesc(dat, orig_array)
 
@@ -137,6 +147,20 @@ class TransformationVerifier:
         seed = 12121
         sampler = DataSampler(self.sampling_strategy, seed)
 
+        general_constraints = None
+        if symbol_constraints is not None:
+            general_constraints = {
+                k: (
+                    pystr_to_symbolic(lval),
+                    pystr_to_symbolic(hval),
+                    pystr_to_symbolic(sval)
+                ) for k, (lval, hval, sval) in symbol_constraints.items()
+            }
+
+        cutout_symbol_constraints = cutout_determine_symbol_constraints(
+            cutout, self.sdfg, pre_constraints=general_constraints
+        )
+
         with tqdm(total=n_samples, disable=(status == StatusLevel.OFF)) as bar:
             i = 0
             resample_attempt = 0
@@ -148,31 +172,44 @@ class TransformationVerifier:
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Sampling symbols')
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
-                    original_cutout
+                    original_cutout, constraints_map=cutout_symbol_constraints
                 )
+
+                constraints_map = None
+                if data_constraints is not None:
+                    constraints_map = {
+                        k: (pystr_to_symbolic(lval), pystr_to_symbolic(hval))
+                        for k, (lval, hval) in data_constraints.items()
+                    }
 
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Sampling inputs')
                 inputs = sampler.sample_inputs(
                     original_cutout, original_input_configuration, symbols_map,
-                    decay_by
+                    decay_by, constraints_map=constraints_map
                 )
 
                 if status >= StatusLevel.VERBOSE:
-                    bar.write('Duplicating inputs for post-transformation cutout')
+                    bar.write(
+                        'Duplicating inputs for post-transformation cutout'
+                    )
                 inputs_xformed = dict()
                 for k, v in inputs.items():
                     if k in xformed_input_configuration:
                         inputs_xformed[k] = deepcopy(v)
 
                 if status >= StatusLevel.VERBOSE:
-                    bar.write('Generating outputs for pre-transformation cutout')
+                    bar.write(
+                        'Generating outputs for pre-transformation cutout'
+                    )
                 out_orig = sampler.generate_output_containers(
                     original_cutout, system_state, original_input_configuration,
                     symbols_map
                 )
                 if status >= StatusLevel.VERBOSE:
-                    bar.write('Generating outputs for post-transformation cutout')
+                    bar.write(
+                        'Generating outputs for post-transformation cutout'
+                    )
                 out_xformed = sampler.generate_output_containers(
                     cutout, system_state, xformed_input_configuration,
                     symbols_map
@@ -186,12 +223,16 @@ class TransformationVerifier:
                     if not k in orig_containers:
                         orig_containers[k] = out_orig[k]
                 if status >= StatusLevel.VERBOSE:
-                    bar.write('Running pre-transformation cutout in a subprocess')
+                    bar.write(
+                        'Running pre-transformation cutout in a subprocess'
+                    )
                 ret_orig = run_subprocess_precompiled(
                     prog_orig, orig_containers, free_symbols_map
                 )
                 if status >= StatusLevel.VERBOSE:
-                    bar.write('Collecting pre-transformation cutout data reports')
+                    bar.write(
+                        'Collecting pre-transformation cutout data reports'
+                    )
                 orig_drep = original_cutout.get_instrumented_data()
 
                 xformed_containers = dict()
@@ -204,12 +245,16 @@ class TransformationVerifier:
                         if not k in xformed_containers:
                             xformed_containers[k] = out_xformed[k]
                 if status >= StatusLevel.VERBOSE:
-                    bar.write('Running post-transformation cutout in a subprocess')
+                    bar.write(
+                        'Running post-transformation cutout in a subprocess'
+                    )
                 ret_xformed = run_subprocess_precompiled(
                     prog_xformed, xformed_containers, free_symbols_map
                 )
                 if status >= StatusLevel.VERBOSE:
-                    bar.write('Collecting post-transformation cutout data reports')
+                    bar.write(
+                        'Collecting post-transformation cutout data reports'
+                    )
                 xformed_drep = cutout.get_instrumented_data()
 
                 if status >= StatusLevel.VERBOSE:
@@ -298,7 +343,8 @@ class TransformationVerifier:
 
     def verify(
         self, n_samples: int = 1, status: StatusLevel = StatusLevel.OFF,
-        debug_save_path: str = None, enforce_finiteness: bool = False
+        debug_save_path: str = None, enforce_finiteness: bool = False,
+        symbol_constraints: Dict = None, data_constraints: Dict = None
     ) -> bool:
         with config.temporary_config():
             config.Config.set(
@@ -313,5 +359,6 @@ class TransformationVerifier:
             config.Config.set('debugprint', value=False)
             config.Config.set('cache', value='hash')
             return self._do_verify(
-                n_samples, status, debug_save_path, enforce_finiteness
+                n_samples, status, debug_save_path, enforce_finiteness,
+                symbol_constraints, data_constraints
             )

@@ -2,6 +2,7 @@
 # This file is part of FuzzyFlow, which is released under the BSD 3-Clause
 # License. For details, see the LICENSE file.
 
+from collections import deque
 import random
 from enum import Enum
 from typing import Dict, List, Set, Tuple, Union
@@ -42,7 +43,8 @@ class DataSampler:
 
 
     def _uniform_samling(
-        self, array: Data, shape: Union[List, Tuple], decay_by: int = 0
+        self, array: Data, shape: Union[List, Tuple], decay_by: int = 0,
+        constraints: Tuple[Number, Number] = None
     ) -> Union[np.ndarray, np.number]:
         npdt = array.dtype.as_numpy_dtype()
         if npdt in [np.float16, np.float32, np.float64]:
@@ -56,9 +58,17 @@ class DataSampler:
 
             low = np.finfo(sample_dtype).min * (2 ** -decay_by)
             high = np.finfo(sample_dtype).max * (2 ** -decay_by)
+            if constraints is not None:
+                low, high = constraints
             if isinstance(array, Scalar):
+                if low == high:
+                    return low
                 return self.random_state.uniform(low=low, high=high)
             else:
+                if low == high:
+                    rval = self.random_state.uniform(size=shape).astype(npdt)
+                    rval.fill(low)
+                    return rval.astype(npdt)
                 return self.random_state.uniform(
                     low=low, high=high, size=shape
                 ).astype(npdt)
@@ -68,19 +78,41 @@ class DataSampler:
         ]:
             low = np.iinfo(npdt).min * (2 ** -decay_by)
             high = np.iinfo(npdt).max * (2 ** -decay_by)
+            if constraints is not None:
+                low, high = constraints
             if isinstance(array, Scalar):
+                if low == high:
+                    return low
                 return np.random.randint(low, high)
             else:
+                if low == high:
+                    rval = np.random.randint(size=shape).astype(npdt)
+                    rval.fill(low)
+                    return rval.astype(npdt)
                 return np.random.randint(low, high, size=shape).astype(npdt)
         elif array.dtype in [ddtypes.bool, ddtypes.bool_]:
             if isinstance(array, Scalar):
                 return np.random.randint(low=0, high=2)
             else:
                 return np.random.randint(low=0, high=2, size=shape).astype(npdt)
-        if isinstance(array, Scalar):
-            return np.random.rand()
+
+        if constraints is not None:
+            low, high = constraints
+            if isinstance(array, Scalar):
+                if low == high:
+                    return low
+                return self.random_state.uniform(low=low, high=high)
+            else:
+                if low == high:
+                    rval = self.random_state.uniform(size=shape)
+                    rval.fill(low)
+                    return rval
+                return self.random_state.uniform(low=low, high=high, size=shape)
         else:
-            return np.random.rand(*shape)
+            if isinstance(array, Scalar):
+                return np.random.rand()
+            else:
+                return np.random.rand(*shape)
 
 
     def _get_container_shape(
@@ -109,12 +141,13 @@ class DataSampler:
 
 
     def _sample_container(
-        self, array: Data, symbols_map: Dict[str, int], decay_by: int = 0
+        self, array: Data, symbols_map: Dict[str, int], decay_by: int = 0,
+        constraints: Tuple[int, int] = None
     ) -> np.ndarray:
         shape = self._get_container_shape(array, symbols_map)
         newdata = None
         if self.strategy == SamplingStrategy.SIMPLE_UNIFORM:
-            newdata = self._uniform_samling(array, shape, decay_by)
+            newdata = self._uniform_samling(array, shape, decay_by, constraints)
         else:
             raise NotImplementedError()
 
@@ -154,15 +187,47 @@ class DataSampler:
 
 
     def sample_symbols_map_for(
-        self, sdfg: SDFG, maxval: int = 128
+        self, sdfg: SDFG, maxval: int = 128, constraints_map: Dict = None
     ) -> Dict[str, int]:
+        cutoff = 10
+
         symbol_map = dict()
         free_symbols_map = dict()
         for k, v in sdfg.constants.items():
             symbol_map[k] = int(v)
+
+        deferred = deque()
         for k in sdfg.free_symbols:
-            symbol_map[k] = random.randint(0, maxval)
-            free_symbols_map[k] = symbol_map[k]
+            if k in constraints_map:
+                deferred.append((k, constraints_map[k], 0))
+            else:
+                symbol_map[k] = random.randint(1, maxval)
+                free_symbols_map[k] = symbol_map[k]
+
+        while len(deferred) > 0:
+            k, (low, high, step), count = deferred.popleft()
+            retlow = None
+            if isinstance(low, symbol):
+                if low in symbol_map:
+                    retlow = symbol_map[low]
+            elif isinstance(low, Expr):
+                res = low.subs(symbol_map)
+                if isinstance(res, Number) and res.is_Integer:
+                    retlow = int(res)
+            rethigh = None
+            if isinstance(high, symbol):
+                if high in symbol_map:
+                    rethigh = symbol_map[low]
+            elif isinstance(high, Expr):
+                res = high.subs(symbol_map)
+                if isinstance(res, Number) and res.is_Integer:
+                    rethigh = int(res)
+            if retlow is None or rethigh is None and count < cutoff:
+                deferred.append((k, (low, high, step), count + 1))
+            else:
+                symbol_map[k] = random.randint(retlow, rethigh)
+                free_symbols_map[k] = symbol_map[k]
+
         for k in sdfg.symbols:
             if k not in symbol_map:
                 symbol_map[k] = 0
@@ -171,12 +236,21 @@ class DataSampler:
 
     def sample_inputs(
         self, sdfg: SDFG, input_configuration: Set[str],
-        symbols_map: Dict[str, int], decay_by: int = 0
+        symbols_map: Dict[str, int], decay_by: int = 0,
+        constraints_map: Dict[str, Tuple[int, int]] = None
     ) -> Dict[str, Union[float, int, np.ndarray]]:
         inputs = dict()
         for name in input_configuration:
             array = sdfg.arrays[name]
-            container = self._sample_container(array, symbols_map, decay_by)
+            constraints = None
+            if constraints_map is not None and name in constraints_map:
+                lconstr, hconstr = constraints_map[name]
+                constraints = (
+                    lconstr.subs(symbols_map), hconstr.subs(symbols_map)
+                )
+            container = self._sample_container(
+                array, symbols_map, decay_by, constraints=constraints
+            )
             inputs[name] = container
         return inputs
 

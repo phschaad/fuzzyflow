@@ -5,7 +5,7 @@
 from enum import Enum
 from functools import total_ordering
 import json
-from typing import Dict, Set, Tuple, Union
+from typing import Dict, Generator, List, Set, Tuple, Union
 
 from dace import serialize
 from dace.sdfg import SDFG, SDFGState, ScopeSubgraphView
@@ -15,7 +15,10 @@ from dace.transformation.transformation import (PatternTransformation,
                                                 SingleStateTransformation,
                                                 MultiStateTransformation,
                                                 SubgraphTransformation)
-from dace.transformation.interstate.loop_detection import DetectLoop
+from dace.transformation.interstate.loop_detection import (DetectLoop,
+                                                           find_for_loop)
+from dace.transformation.passes.pattern_matching import match_patterns
+from dace import symbolic
 
 
 @total_ordering
@@ -29,6 +32,16 @@ class StatusLevel(Enum):
         if self.__class__ is other.__class__:
             return self.value < other.value
         raise ValueError('Cannot compare StatusLevel to', str(other.__class__))
+
+
+class LoopDetection(DetectLoop, MultiStateTransformation):
+
+    def can_be_applied(self, graph, expr_index, sdfg, permissive=False):
+        return super().can_be_applied(graph, expr_index, sdfg, permissive)
+
+
+    def apply(self, _, sdfg):
+        return super().apply(_, sdfg)
 
 
 def transformation_get_affected_nodes(
@@ -163,3 +176,29 @@ def translate_transformation(
                 new_node = translation_dict[old_node]
                 new_subgraph.add(target_sdfg.start_state.node_id(new_node))
         xform.subgraph = new_subgraph
+
+
+def cutout_determine_symbol_constraints(
+    ct: SDFG, sdfg: SDFG, pre_constraints: Dict = None
+) -> Dict:
+    general_constraints = dict()
+    if pre_constraints is not None:
+        general_constraints = pre_constraints
+
+    loop_matches: List[LoopDetection] = list(
+        match_patterns(sdfg, LoopDetection)
+    )
+    for ld in loop_matches:
+        if (ld.loop_guard is not None and ld.loop_begin is not None and
+            ld.exit_state is not None):
+            res = find_for_loop(ld._sdfg, ld.loop_guard, ld.loop_begin)
+            if res is not None and res[0] not in general_constraints:
+                itvar, rng, _ = res
+                general_constraints[itvar] = rng
+
+    cutout_constraints = dict()
+    for s in ct.free_symbols:
+        if s in general_constraints:
+            cutout_constraints[s] = general_constraints[s]
+
+    return cutout_constraints
