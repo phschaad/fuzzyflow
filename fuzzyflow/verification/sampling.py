@@ -86,7 +86,9 @@ class DataSampler:
                 return np.random.randint(low, high)
             else:
                 if low == high:
-                    rval = np.random.randint(size=shape).astype(npdt)
+                    rval = np.random.randint(
+                        low=0, high=1, size=shape
+                    ).astype(npdt)
                     rval.fill(low)
                     return rval.astype(npdt)
                 return np.random.randint(low, high, size=shape).astype(npdt)
@@ -222,8 +224,17 @@ class DataSampler:
                 res = high.subs(symbol_map)
                 if isinstance(res, Number) and res.is_Integer:
                     rethigh = int(res)
-            if retlow is None or rethigh is None and count < cutoff:
-                deferred.append((k, (low, high, step), count + 1))
+            if retlow is None or rethigh is None:
+                if count < cutoff:
+                    deferred.append((k, (low, high, step), count + 1))
+                else:
+                    symbol_map[k] = random.randint(1, maxval)
+                    free_symbols_map[k] = symbol_map[k]
+                    print(
+                        'Warning: sampling dependent symbol between', str(1),
+                        'and', str(maxval),
+                        'because dependent value cannot be found'
+                    )
             else:
                 symbol_map[k] = random.randint(retlow, rethigh)
                 free_symbols_map[k] = symbol_map[k]

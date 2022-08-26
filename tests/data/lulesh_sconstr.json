@@ -1,3 +1,4 @@
 {
-    "_symnumelem8": ["8*_symnumelem", "8*_symnumelem", "0"]
+    "_symnumelem8": ["8*_symnumelem", "8*_symnumelem", "0"],
+    "k": ["0", "_symnumelem - 1", "1"]
 }

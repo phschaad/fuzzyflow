@@ -3,12 +3,14 @@
 # License. For details, see the LICENSE file.
 
 import argparse
+import json
 import os
+import warnings
 
 from dace.sdfg import SDFG
 
 from fuzzyflow import cutout
-from fuzzyflow.util import load_transformation_from_file
+from fuzzyflow.util import StatusLevel, load_transformation_from_file
 from fuzzyflow.verification.sampling import SamplingStrategy
 from fuzzyflow.verification.verifier import TransformationVerifier
 
@@ -58,6 +60,17 @@ def main():
         default=SamplingStrategy.SIMPLE_UNIFORM
     )
 
+    parser.add_argument(
+        '--data-constraints-file',
+        type=str,
+        help='<Path to constraints file for data containers>'
+    )
+    parser.add_argument(
+        '--symbol-constraints-file',
+        type=str,
+        help='<Path to constraints file for symbols>'
+    )
+
     args = parser.parse_args()
 
     # Check if both the SDFG file and transformation file exist.
@@ -75,16 +88,34 @@ def main():
     sdfg = SDFG.from_file(sdfg_path)
     sdfg.validate()
 
+    symbol_constraints = None
+    data_constraints = None
+    sc_file_path = args.symbol_constraints_file
+    if sc_file_path is not None and os.path.exists(sc_file_path):
+        with open(sc_file_path, 'r') as sc_file:
+            symbol_constraints = json.load(sc_file)
+    dc_file_path = args.data_constraints_file
+    if dc_file_path is not None and os.path.exists(dc_file_path):
+        with open(dc_file_path, 'r') as dc_file:
+            data_constraints = json.load(dc_file)
+
     xform, target_sdfg = load_transformation_from_file(xform_path, sdfg)
     if xform is None or target_sdfg is None:
         print('Failed to load transformation')
         exit(1)
 
+    warnings.filterwarnings(
+        'ignore', message='.*already loaded, renaming file.*'
+    )
+
     verifier = TransformationVerifier(
         xform, sdfg, args.cutout_strategy, args.sampling_strategy
     )
 
-    valid = verifier.verify(args.runs, status=True, enforce_finiteness=True)
+    valid = verifier.verify(
+        args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
+        symbol_constraints=symbol_constraints, data_constraints=data_constraints
+    )
 
     print('Transformation is valid' if valid else 'INVALID Transformation!')
 

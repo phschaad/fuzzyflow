@@ -7,6 +7,7 @@ from typing import Dict, List, Union
 import numpy as np
 from tqdm import tqdm
 
+import dace
 from dace import config, dtypes
 from dace.codegen.compiled_sdfg import CompiledSDFG
 from dace.data import Scalar
@@ -97,6 +98,7 @@ class TransformationVerifier:
         if status >= StatusLevel.DEBUG:
             print('Applying transformation')
         apply_transformation(cutout, self.xform)
+
         for dat in system_state:
             if dat not in cutout.arrays.keys():
                 print(
@@ -334,7 +336,7 @@ class TransformationVerifier:
                     )
             if n_crashes > 0:
                 print(
-                    str(n_crashes), 'trials out of ', str(n_samples),
+                    str(n_crashes), 'trials out of', str(n_samples),
                     'caused crashes'
                 )
 

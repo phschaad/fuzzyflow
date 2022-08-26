@@ -137,9 +137,9 @@ def main():
         i = file_contents['index']
         matches = [serialize.from_json(t) for t in file_contents['matches']]
         n_matches = len(matches)
-        while i < len(matches):
+        while (i - 1) < len(matches):
             print('Testing match', i, 'of', str(n_matches))
-            match = matches[i]
+            match = matches[i - 1]
             match._sdfg = sdfg.sdfg_list[match.sdfg_id]
             verifier = TransformationVerifier(
                 match, sdfg, args.cutout_strategy, args.sampling_strategy

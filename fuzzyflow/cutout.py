@@ -33,31 +33,6 @@ class CutoutStrategy(Enum):
         return self.value
 
 
-def _input_volume_for_nodes(
-    state: SDFGState, nodes: Set[nd.Node]
-) -> Tuple[sp.Expr, List[nd.AccessNode]]:
-    ct = cutout_state(state, *nodes)
-    inputs: List[nd.AccessNode] = ct.input_arrays()
-    indata = [ct.arrays[n.data] for n in inputs]
-    total_volume = 0
-    for dat in indata:
-        total_volume += dat.total_size
-    return total_volume, inputs
-
-
-def _minimum_dominator_flow_cutout(
-    sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
-) -> SDFG:
-    affected_nodes = util.transformation_get_affected_nodes(sdfg, xform)
-    if (isinstance(xform, SubgraphTransformation) or
-        isinstance(xform, SingleStateTransformation)):
-        state = sdfg.node(xform.state_id)
-        base_volume, inputs = _input_volume_for_nodes(state, affected_nodes)
-    elif isinstance(xform, MultiStateTransformation):
-        raise NotImplementedError('Multistate cutouts not yet supported')
-    raise Exception('This type of transformation cannot be supported')
-
-
 def _minimal_transformation_cutout(
     p_sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
 ) -> Tuple[SDFG, TranslationDict]:
@@ -274,6 +249,11 @@ def cutout_state(
     freesyms = subgraph.free_symbols
     for sym in freesyms:
         new_sdfg.add_symbol(sym, defined_syms[sym])
+
+    if sdfg.parent_nsdfg_node is not None:
+        for s, v in sdfg.parent_nsdfg_node.symbol_mapping.items():
+            if s not in new_sdfg.symbols and s in defined_syms:
+                new_sdfg.add_symbol(s, defined_syms[s])
 
     for dnode in subgraph.data_nodes():
         if dnode.data in new_sdfg.arrays:
@@ -509,11 +489,15 @@ def cutout(
 ) -> SDFG:
     if state is not None:
         if any([isinstance(n, SDFGState) for n in nodes]):
-            raise Exception('Mixing cutout nodes of type Node and SDFGState is not allowed')
+            raise Exception(
+                'Mixing cutout nodes of type Node and SDFGState is not allowed'
+            )
         new_sdfg = cutout_state(state, *nodes, make_copy=True, inserted_nodes=translation)
     else:
         if any([isinstance(n, nd.Node) for n in nodes]):
-            raise Exception('Mixing cutout nodes of type Node and SDFGState is not allowed')
+            raise Exception(
+                'Mixing cutout nodes of type Node and SDFGState is not allowed'
+            )
         new_sdfg = multistate_cutout(*nodes, inserted_states=translation)
 
     # Ensure the parent relationships and SDFG list is correct.
@@ -572,8 +556,6 @@ def cutout_determine_input_config(
             if v == state:
                 original_state = k
                 break
-        if original_state is None:
-            raise KeyError('Could not find state in translation')
         for k, v in state_reach.items():
             if ((k not in translation_dict or
                  translation_dict[k] not in cutout_states)
