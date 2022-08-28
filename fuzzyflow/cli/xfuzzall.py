@@ -226,7 +226,8 @@ def main():
 
         if len(invalid) > 0:
             print('Invalid were the following', len(invalid), 'instances:')
-            std_invalid = list(invalid).sort()
+            std_invalid = list(invalid)
+            std_invalid.sort()
             for i in std_invalid:
                 print(i)
 

@@ -7,6 +7,7 @@ import copy
 from enum import Enum
 from typing import Deque, Dict, List, Optional, Set, Tuple, Union
 import sympy as sp
+import networkx as nx
 
 from dace import data, Memlet
 from dace.sdfg import SDFG, SDFGState
@@ -33,10 +34,135 @@ class CutoutStrategy(Enum):
         return self.value
 
 
-def _minimal_transformation_cutout(
+def _reduce_in_configuration(
+    state: SDFGState, sdfg: SDFG, affected_nodes: Set[nd.Node]
+) -> Set[Union[nd.Node, SDFGState]]:
+    subgraph: StateSubgraphView = StateSubgraphView(state, affected_nodes)
+    subgraph = _extend_subgraph_with_access_nodes(state, subgraph)
+    subgraph_nodes = set(subgraph.nodes())
+
+    symbols_map = dict()
+    for s in sdfg.free_symbols:
+        symbols_map[s] = 20 # TODO: we should probably fix this differently.
+
+    source_candidates = set()
+    for n in subgraph_nodes:
+        source_candidates.add(state.entry_node(n))
+
+    source = None
+    if len(source_candidates) == 1:
+        source = list(source_candidates)[0]
+
+    proxy = nx.DiGraph()
+    scope = set(state.nodes())
+    if source == None:
+        source = 'PROXY_SOURCE'
+    else:
+        child_dict = state.scope_children()
+        scope = child_dict[source]
+    proxy.add_node(source)
+    sink = 'PROXY_SINK'
+    proxy.add_node(sink)
+
+    #state_input_config = _determine_state_input_config(sdfg, state)
+
+    proxy_in_volume = 0
+    for n in scope:
+        if n in subgraph_nodes or n == source:
+            for iedge in state.in_edges(n):
+                if (iedge.src not in subgraph_nodes and
+                    isinstance(n, nd.AccessNode)):
+                    vol = sdfg.arrays[n.data].total_size
+                    if isinstance(vol, sp.Expr):
+                        vol = vol.subs(symbols_map)
+                    proxy_in_volume += vol
+                    if proxy.has_edge(iedge.src, sink):
+                        proxy[iedge.src][sink]['capacity'] += vol
+                        proxy[iedge.src][sink]['orig'].append(iedge)
+                    else:
+                        proxy.add_edge(
+                            iedge.src, sink, capacity=vol, orig=[iedge]
+                        )
+        else:
+            proxy.add_node(n)
+
+            for iedge in state.in_edges(n):
+                if iedge.src not in subgraph_nodes:
+                    vol = iedge.data.volume
+                    if isinstance(vol, sp.Expr):
+                        vol = vol.subs(symbols_map)
+                    if proxy.has_edge(iedge.src, n):
+                        proxy[iedge.src][n]['capacity'] += vol
+                        proxy[iedge.src][n]['orig'].append(iedge)
+                    else:
+                        proxy.add_edge(iedge.src, n, capacity=vol, orig=[iedge])
+                else:
+                    vol = iedge.data.volume
+                    if isinstance(vol, sp.Expr):
+                        vol = vol.subs(symbols_map)
+                    if proxy.has_edge(sink, n):
+                        proxy[sink][n]['capacity'] += vol
+                        proxy[sink][n]['orig'].append(iedge)
+                    else:
+                        proxy.add_edge(sink, n, capacity=vol, orig=[iedge])
+    if proxy_in_volume > 0:
+        proxy.add_edge(source, sink, capacity=proxy_in_volume)
+
+    cut_val, (_, non_reachable) = nx.minimum_cut(
+        proxy, source, sink, flow_func=nx.flow.edmonds_karp
+    )
+
+    if cut_val < proxy_in_volume * 2:
+        reachability_dict = dict(nx.all_pairs_bellman_ford_path_length(proxy))
+        expanded_affected = set(affected_nodes)
+        for n in non_reachable:
+            if n not in affected_nodes and n != sink:
+                post_sink_reachable = reachability_dict[sink]
+                if n not in post_sink_reachable:
+                    expanded_affected.add(n)
+        return expanded_affected
+    else:
+        return affected_nodes
+
+
+def _minimum_dominator_flow_cutout(
     p_sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation]
 ) -> Tuple[SDFG, TranslationDict]:
     affected_nodes = util.transformation_get_affected_nodes(p_sdfg, xform)
+
+    if (isinstance(xform, SubgraphTransformation) or
+        isinstance(xform, SingleStateTransformation)):
+        if xform.sdfg_id >= 0 and p_sdfg.sdfg_list:
+            sdfg = p_sdfg.sdfg_list[xform.sdfg_id]
+        else:
+            sdfg = p_sdfg
+
+        state = sdfg.node(xform.state_id)
+
+        reduced_affected_nodes = _reduce_in_configuration(
+            state, sdfg, affected_nodes
+        )
+
+        translation_dict: TranslationDict = dict()
+        ct = cutout(
+            *reduced_affected_nodes, translation=translation_dict, state=state
+        )
+        util.translate_transformation(xform, sdfg, ct, translation_dict)
+        return ct, translation_dict
+    else:
+        # For multistate cutouts we do not attempt to reduce the input
+        # configuration, since the configuration is dependent on having a single
+        # input state to the cutout.
+        return _minimal_transformation_cutout(p_sdfg, xform, affected_nodes)
+
+
+def _minimal_transformation_cutout(
+    p_sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation],
+    affected_nodes: Optional[Set[Union[nd.Node, SDFGState]]] = None
+) -> Tuple[SDFG, TranslationDict]:
+    if affected_nodes is None:
+        affected_nodes = util.transformation_get_affected_nodes(p_sdfg, xform)
+
     if xform.sdfg_id >= 0 and p_sdfg.sdfg_list:
         sdfg = p_sdfg.sdfg_list[xform.sdfg_id]
     else:
@@ -68,8 +194,8 @@ def find_cutout_for_transformation(
 ) -> Tuple[SDFG, TranslationDict]:
     if strategy == CutoutStrategy.SIMPLE:
         return _minimal_transformation_cutout(sdfg, xform)
-    #elif strategy == CutoutStrategy.MINIMUM_DOMINATOR_FLOW:
-    #    return _minimum_dominator_flow_cutout(sdfg, xform)
+    elif strategy == CutoutStrategy.MINIMUM_DOMINATOR_FLOW:
+        return _minimum_dominator_flow_cutout(sdfg, xform)
     raise Exception('Unknown cutout strategy')
 
 
@@ -251,7 +377,7 @@ def cutout_state(
         new_sdfg.add_symbol(sym, defined_syms[sym])
 
     if sdfg.parent_nsdfg_node is not None:
-        for s, v in sdfg.parent_nsdfg_node.symbol_mapping.items():
+        for s, _ in sdfg.parent_nsdfg_node.symbol_mapping.items():
             if s not in new_sdfg.symbols and s in defined_syms:
                 new_sdfg.add_symbol(s, defined_syms[s])
 
@@ -508,6 +634,41 @@ def cutout(
     new_sdfg.reset_sdfg_list()
 
     return new_sdfg
+
+
+def _determine_state_input_config(sdfg: SDFG, state: SDFGState) -> Set[str]:
+    input_configuration = set()
+
+    check_for_write_before = set()
+
+    state_reach_sdfgs = StateReachability().apply_pass(sdfg, None)
+    state_reach = state_reach_sdfgs[sdfg.sdfg_id]
+    inverse_reach: Set[SDFGState] = set()
+
+    for dn in state.data_nodes():
+        array = sdfg.arrays[dn.data]
+        if not array.transient:
+            # Non-transients are always part of the system state.
+            input_configuration.add(dn.data)
+        elif state.out_degree(dn) > 0:
+            # This is read from, add to the system state if it is written
+            # anywhere else in the graph.
+            check_for_write_before.add(dn.data)
+
+    for k, v in state_reach.items():
+        if k != state and state in v:
+            inverse_reach.add(k)
+
+    for state in inverse_reach:
+        for dn in state.data_nodes():
+            if state.in_degree(dn) > 0:
+                # For any writes, check if they are reads from the cutout that
+                # need to be checked. If they are, they're part of the system
+                # state.
+                if dn.data in check_for_write_before:
+                    input_configuration.add(dn.data)
+
+    return input_configuration
 
 
 def cutout_determine_input_config(
