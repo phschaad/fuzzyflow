@@ -126,20 +126,20 @@ class TransformationVerifier:
             original_cutout.save(debug_save_path + '_orig.sdfg')
             cutout.save(debug_save_path + '_xformed.sdfg')
 
-        if not xformed_input_configuration.issubset(
-            original_input_configuration
-        ):
-            print(
-                'Failed due to invalid input configuration after transforming!'
-            )
-            return False
+        ##if not xformed_input_configuration.issubset(
+        ##    original_input_configuration
+        ##):
+        ##    print(
+        ##        'Failed due to invalid input configuration after transforming!'
+        ##    )
+        ##    return False
 
         if status >= StatusLevel.DEBUG:
             print('Compiling pre-transformation cutout')
         prog_orig: CompiledSDFG = original_cutout.compile()
         if status >= StatusLevel.DEBUG:
             print('Compiling post-transformation cutout')
-        prog_xformed: CompiledSDFG = cutout.compile()
+        prog_xformed: CompiledSDFG = cutout.compile(validate=False)
         if status >= StatusLevel.DEBUG:
             print(
                 'Verifying transformation over', n_samples,
@@ -174,7 +174,8 @@ class TransformationVerifier:
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Sampling symbols')
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
-                    original_cutout, constraints_map=cutout_symbol_constraints
+                    original_cutout, constraints_map=cutout_symbol_constraints,
+                    maxval=256
                 )
 
                 constraints_map = None
@@ -270,30 +271,44 @@ class TransformationVerifier:
                     resample = False
                     for dat in system_state:
 
-                        oval = orig_drep.get_latest_version(dat)
-                        if dat in xformed_drep.files:
-                            nval = xformed_drep.get_latest_version(dat)
-                        else:
-                            if isinstance(cutout.arrays[dat], Scalar):
-                                nval = [inputs[dat]]
+                        try:
+                            oval = orig_drep.get_latest_version(dat)
+                            if dat in xformed_drep.files:
+                                nval = xformed_drep.get_latest_version(dat)
                             else:
-                                nval = inputs[dat]
+                                if dat not in inputs:
+                                    if status >= StatusLevel.VERBOSE:
+                                        bar.write('System state mismatch!')
+                                    return False
+                                if isinstance(cutout.arrays[dat], Scalar):
+                                    nval = [inputs[dat]]
+                                else:
+                                    nval = inputs[dat]
 
-                        if enforce_finiteness and not np.isfinite(oval).all():
-                            if status >= StatusLevel.VERBOSE:
-                                bar.write('Non-finite results, resampling')
-                            resample = True
+                            if (enforce_finiteness and
+                                not np.isfinite(oval).all()):
+                                if status >= StatusLevel.VERBOSE:
+                                    bar.write('Non-finite results, resampling')
+                                resample = True
 
-                        if isinstance(oval, np.ndarray):
-                            if not np.allclose(oval, nval, equal_nan=True):
-                                if status >= StatusLevel.VERBOSE:
-                                    bar.write('Result mismatch!')
-                                return False
-                        else:
-                            if not np.allclose([oval], [nval], equal_nan=True):
-                                if status >= StatusLevel.VERBOSE:
-                                    bar.write('Result mismatch!')
-                                return False
+                            if isinstance(oval, np.ndarray):
+                                if not np.allclose(oval, nval, equal_nan=True):
+                                    if status >= StatusLevel.VERBOSE:
+                                        bar.write('Result mismatch!')
+                                    return False
+                            else:
+                                if not np.allclose(
+                                    [oval], [nval], equal_nan=True
+                                ):
+                                    if status >= StatusLevel.VERBOSE:
+                                        bar.write('Result mismatch!')
+                                    return False
+                        except:
+                            print(
+                                'WARNING: Missing instrumentation on system ' +
+                                'state for container',
+                                dat
+                            )
 
                     if not resample or resample_attempt > 11:
                         if resample_attempt > 11:

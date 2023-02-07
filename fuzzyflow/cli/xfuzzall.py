@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import warnings
+from typing import List
 
 from dace import serialize
 from dace.sdfg import SDFG
@@ -190,7 +191,9 @@ def main():
             print('Transformation type', xf_type, 'has no member', xf_name)
             exit(1)
 
-        matches = list(match_patterns(sdfg, getattr(base_cls, xf_name)))
+        matches: List = list(
+            match_patterns(sdfg, getattr(base_cls, xf_name))
+        )
         n_matches = len(matches)
         print('Found', str(n_matches), 'matches')
 
@@ -202,22 +205,28 @@ def main():
 
         i = 1
         invalid = set()
+        failed = set()
         for match in matches:
             print('Testing match', i, 'of', str(n_matches))
             verifier = TransformationVerifier(
                 match, sdfg, args.cutout_strategy, args.sampling_strategy
             )
-            valid = verifier.verify(
-                args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
-                symbol_constraints=symbol_constraints,
-                data_constraints=data_constraints
-            )
-            if not valid:
-                print('INVALID Transformation!')
-                invalid.add(i)
-                file_contents['invalid_indices'].append(i)
-            else:
-                print('Transformation is valid')
+            try:
+                valid = verifier.verify(
+                    args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
+                    symbol_constraints=symbol_constraints,
+                    data_constraints=data_constraints
+                )
+                if not valid:
+                    print('INVALID Transformation!')
+                    invalid.add(i)
+                    file_contents['invalid_indices'].append(i)
+                else:
+                    print('Transformation is valid')
+            except Exception as e:
+                failed.add(i)
+                print('Failed to validate with exception')
+                print(e)
             i += 1
 
             file_contents['index'] = i
@@ -229,6 +238,12 @@ def main():
             std_invalid = list(invalid)
             std_invalid.sort()
             for i in std_invalid:
+                print(i)
+        if len(failed) > 0:
+            print('Failed in the following', len(failed), 'instances:')
+            std_failed = list(failed)
+            std_failed.sort()
+            for i in std_failed:
                 print(i)
 
 

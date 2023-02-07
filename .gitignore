@@ -8,3 +8,5 @@ _dacegraphs/
 
 tests/**/dbg/
 
+*.progressfile
+

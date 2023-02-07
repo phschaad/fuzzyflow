@@ -341,6 +341,13 @@ def multistate_cutout(
 
     inserted_states[sdfg.sdfg_id] = new_sdfg.sdfg_id
 
+    # Check interstate edges for missing data descriptors.
+    for e in new_sdfg.edges():
+        for s in e.data.free_symbols:
+            if s in sdfg.arrays and s not in new_sdfg.arrays:
+                desc = sdfg.arrays[s]
+                new_sdfg.add_datadesc(s, desc)
+
     return new_sdfg
 
 
@@ -697,9 +704,12 @@ def cutout_determine_input_config(
     must_have_descriptors = set()
     if system_state is not None:
         must_have_descriptors.update(system_state)
+    noded_descriptors = set()
 
     for state in cutout_states:
         for dn in state.data_nodes():
+            noded_descriptors.add(dn.data)
+
             if dn.data in must_have_descriptors:
                 must_have_descriptors.remove(dn.data)
 
@@ -747,7 +757,9 @@ def cutout_determine_input_config(
     # Anything that doesn't have a correpsonding access node must be used as
     # well.
     for desc in must_have_descriptors:
-        if desc not in input_configuration:
+        input_configuration.add(desc)
+    for desc in ct.arrays.keys():
+        if desc not in noded_descriptors:
             input_configuration.add(desc)
 
     return input_configuration
