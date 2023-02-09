@@ -3,9 +3,12 @@
 # License. For details, see the LICENSE file.
 
 from copy import deepcopy
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional, Any
+import os
 import numpy as np
 from tqdm import tqdm
+from enum import Enum
+import json
 
 import dace
 from dace import config, dtypes
@@ -16,6 +19,7 @@ from dace.sdfg import nodes as nd
 from dace.transformation.transformation import (PatternTransformation,
                                                 SubgraphTransformation)
 from dace.symbolic import pystr_to_symbolic
+from dace.sdfg.validation import InvalidSDFGError
 
 from fuzzyflow.cutout import (CutoutStrategy,
                               TranslationDict,
@@ -27,14 +31,22 @@ from fuzzyflow.util import StatusLevel, apply_transformation, cutout_determine_s
 from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
 
 
+class FailureReason(Enum):
+    FAILED_VALIDATE = 'FAILED_VALIDATE'
+    EXIT_CODE_MISMATCH = 'EXIT_CODE_MISMATCH'
+    SYSTEM_STATE_MISMATCH = 'SYSTEM_STATE_MISMATCH'
+
+
 class TransformationVerifier:
 
     xform: Union[SubgraphTransformation, PatternTransformation] = None
     sdfg: SDFG = None
     cutout_strategy: CutoutStrategy = CutoutStrategy.SIMPLE
     sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM
+    output_dir: Optional[str] = None
 
     _cutout: SDFG = None
+    _original_cutout: SDFG = None
     _translation_dict: TranslationDict = None
 
     def __init__(
@@ -42,12 +54,14 @@ class TransformationVerifier:
         xform: Union[SubgraphTransformation, PatternTransformation],
         sdfg: SDFG,
         cutout_strategy: CutoutStrategy = CutoutStrategy.SIMPLE,
-        sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM
+        sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM,
+        output_dir: Optional[str] = None,
     ):
         self.xform = xform
         self.sdfg = sdfg
         self.cutout_strategy = cutout_strategy
         self.sampling_strategy = sampling_strategy
+        self.output_dir = output_dir
 
 
     def cutout(
@@ -80,6 +94,33 @@ class TransformationVerifier:
         return self._cutout
 
 
+    def _catch_failure(
+        self, reason: FailureReason, details: Optional[str]
+    ) -> None:
+        if self.output_dir:
+            # Save SDFGs for cutout both before and after transforming.
+            self._original_cutout.save(
+                os.path.join(self.output_dir, 'pre.sdfg')
+            )
+            self._cutout.save(
+                os.path.join(self.output_dir, 'post.sdfg')
+            )
+            # Save the transformation.
+            with open(os.path.join(self.output_dir, 'xform.json'), 'w') as f:
+                json.dump(self.xform.to_json(), f, indent=4)
+
+            # Save additional information about the failure.
+            with open(os.path.join(self.output_dir, reason.value), 'w') as f:
+                if details:
+                    f.writelines([
+                        'Reason: ' + reason.value + '\n', 'Details: ', details
+                    ])
+                else:
+                    f.writelines([
+                        'Reason:' + reason.value + '\n', 'Details: -'
+                    ])
+
+
     def _do_verify(
         self, n_samples: int = 1, status: StatusLevel = StatusLevel.OFF,
         debug_save_path: str = None, enforce_finiteness: bool = False,
@@ -94,10 +135,14 @@ class TransformationVerifier:
             cutout, self.sdfg, self._translation_dict
         )
 
-        original_cutout = deepcopy(cutout)
+        self._original_cutout = deepcopy(cutout)
         if status >= StatusLevel.DEBUG:
             print('Applying transformation')
-        apply_transformation(cutout, self.xform)
+        try:
+            apply_transformation(cutout, self.xform)
+        except InvalidSDFGError as e:
+            self._catch_failure(FailureReason.FAILED_VALIDATE, str(e))
+            return False
 
         for dat in system_state:
             if dat not in cutout.arrays.keys():
@@ -105,7 +150,7 @@ class TransformationVerifier:
                     'Warning: Transformation removed something from system ' +
                     'state!'
                 )
-                orig_array = original_cutout.arrays[dat]
+                orig_array = self._original_cutout.arrays[dat]
                 cutout.add_datadesc(dat, orig_array)
 
         xformed_input_configuration = cutout_determine_input_config(
@@ -117,13 +162,13 @@ class TransformationVerifier:
             for dn in s.data_nodes():
                 if dn.data in system_state:
                     dn.instrument = dtypes.DataInstrumentationType.Save
-        for s in original_cutout.states():
+        for s in self._original_cutout.states():
             for dn in s.data_nodes():
                 if dn.data in system_state:
                     dn.instrument = dtypes.DataInstrumentationType.Save
 
         if debug_save_path is not None:
-            original_cutout.save(debug_save_path + '_orig.sdfg')
+            self._original_cutout.save(debug_save_path + '_orig.sdfg')
             cutout.save(debug_save_path + '_xformed.sdfg')
 
         ##if not xformed_input_configuration.issubset(
@@ -136,7 +181,7 @@ class TransformationVerifier:
 
         if status >= StatusLevel.DEBUG:
             print('Compiling pre-transformation cutout')
-        prog_orig: CompiledSDFG = original_cutout.compile()
+        prog_orig: CompiledSDFG = self._original_cutout.compile()
         if status >= StatusLevel.DEBUG:
             print('Compiling post-transformation cutout')
         prog_xformed: CompiledSDFG = cutout.compile(validate=False)
@@ -174,8 +219,8 @@ class TransformationVerifier:
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Sampling symbols')
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
-                    original_cutout, constraints_map=cutout_symbol_constraints,
-                    maxval=256
+                    self._original_cutout,
+                    constraints_map=cutout_symbol_constraints, maxval=256
                 )
 
                 constraints_map = None
@@ -188,8 +233,8 @@ class TransformationVerifier:
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Sampling inputs')
                 inputs = sampler.sample_inputs(
-                    original_cutout, original_input_configuration, symbols_map,
-                    decay_by, constraints_map=constraints_map
+                    self._original_cutout, original_input_configuration,
+                    symbols_map, decay_by, constraints_map=constraints_map
                 )
 
                 if status >= StatusLevel.VERBOSE:
@@ -206,8 +251,8 @@ class TransformationVerifier:
                         'Generating outputs for pre-transformation cutout'
                     )
                 out_orig = sampler.generate_output_containers(
-                    original_cutout, system_state, original_input_configuration,
-                    symbols_map
+                    self._original_cutout, system_state,
+                    original_input_configuration, symbols_map
                 )
                 if status >= StatusLevel.VERBOSE:
                     bar.write(
@@ -236,7 +281,7 @@ class TransformationVerifier:
                     bar.write(
                         'Collecting pre-transformation cutout data reports'
                     )
-                orig_drep = original_cutout.get_instrumented_data()
+                orig_drep = self._original_cutout.get_instrumented_data()
 
                 xformed_containers = dict()
                 for k in inputs.keys():
@@ -266,6 +311,11 @@ class TransformationVerifier:
                     (ret_orig == 0 and ret_xformed != 0)):
                     if status >= StatusLevel.VERBOSE:
                         bar.write('One cutout failed to run, the other ran!')
+                    self._catch_failure(
+                        FailureReason.EXIT_CODE_MISMATCH,
+                        f'Exit code (${ret_xformed}) does not match oringinal' +
+                        f' exit code (${ret_orig})'
+                    )
                     return False
                 elif ret_orig == 0 and ret_xformed == 0:
                     resample = False
@@ -279,6 +329,10 @@ class TransformationVerifier:
                                 if dat not in inputs:
                                     if status >= StatusLevel.VERBOSE:
                                         bar.write('System state mismatch!')
+                                    self._catch_failure(
+                                        FailureReason.SYSTEM_STATE_MISMATCH,
+                                        f'Missing input ${dat}'
+                                    )
                                     return False
                                 if isinstance(cutout.arrays[dat], Scalar):
                                     nval = [inputs[dat]]
@@ -295,6 +349,10 @@ class TransformationVerifier:
                                 if not np.allclose(oval, nval, equal_nan=True):
                                     if status >= StatusLevel.VERBOSE:
                                         bar.write('Result mismatch!')
+                                    self._catch_failure(
+                                        FailureReason.SYSTEM_STATE_MISMATCH,
+                                        f'Mismatching results for ${dat}'
+                                    )
                                     return False
                             else:
                                 if not np.allclose(
@@ -302,6 +360,10 @@ class TransformationVerifier:
                                 ):
                                     if status >= StatusLevel.VERBOSE:
                                         bar.write('Result mismatch!')
+                                    self._catch_failure(
+                                        FailureReason.SYSTEM_STATE_MISMATCH,
+                                        f'Mismatching results for ${dat}'
+                                    )
                                     return False
                         except:
                             print(

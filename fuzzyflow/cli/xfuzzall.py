@@ -34,6 +34,13 @@ def main():
     )
 
     parser.add_argument(
+        '-o',
+        '--output',
+        type=str,
+        help='<PATH TO OUTPUT FOLDER>',
+    )
+
+    parser.add_argument(
         '-t',
         '--transformation',
         type=str,
@@ -88,6 +95,12 @@ def main():
         help='<Path to constraints file for symbols>'
     )
 
+    parser.add_argument(
+        '--skip-n',
+        type=int,
+        help='Skip the first N instances of the transformation'
+    )
+
     args = parser.parse_args()
 
     sdfg_path = args.programpath
@@ -124,6 +137,11 @@ def main():
         with open(dc_file_path, 'r') as dc_file:
             data_constraints = json.load(dc_file)
 
+    if args.output is not None:
+        if not os.path.exists(args.output):
+            os.makedirs(args.output, exist_ok=True)
+    output_dir = args.output if os.path.exists(args.output) else None
+
     if args.restore and os.path.exists(progress_save_path):
         savefile = open(progress_save_path, 'r')
         if savefile is None:
@@ -142,8 +160,15 @@ def main():
             print('Testing match', i, 'of', str(n_matches))
             match = matches[i - 1]
             match._sdfg = sdfg.sdfg_list[match.sdfg_id]
+            instance_out_path = None
+            if output_dir:
+                instance_out_path = os.path.join(
+                    output_dir, xf_name + '_' + str(i)
+                )
+                os.makedirs(instance_out_path, exist_ok=True)
             verifier = TransformationVerifier(
-                match, sdfg, args.cutout_strategy, args.sampling_strategy
+                match, sdfg, args.cutout_strategy, args.sampling_strategy,
+                instance_out_path
             )
             valid = verifier.verify(
                 args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
@@ -208,8 +233,20 @@ def main():
         failed = set()
         for match in matches:
             print('Testing match', i, 'of', str(n_matches))
+            if args.skip_n:
+                if i <= args.skip_n:
+                    print('Skipping')
+                    i += i
+                    continue
+            instance_out_path = None
+            if output_dir:
+                instance_out_path = os.path.join(
+                    output_dir, xf_name + '_' + str(i)
+                )
+                os.makedirs(instance_out_path, exist_ok=True)
             verifier = TransformationVerifier(
-                match, sdfg, args.cutout_strategy, args.sampling_strategy
+                match, sdfg, args.cutout_strategy, args.sampling_strategy,
+                instance_out_path
             )
             try:
                 valid = verifier.verify(
