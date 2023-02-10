@@ -7,6 +7,9 @@ _dacegraphs/
 !.vscode/fuzzyflow.code-workspace
 
 tests/**/dbg/
+tests/cloudsc_sc
+tests/tmp
+tests/icse23_eval
 
 *.progressfile
 

@@ -22,7 +22,6 @@ from dace.transformation.passes.analysis import StateReachability
 
 from fuzzyflow import util
 
-
 TranslationDict = Dict[Union[nd.Node, SDFGState], Union[nd.Node, SDFGState]]
 
 
@@ -35,7 +34,8 @@ class CutoutStrategy(Enum):
 
 
 def _reduce_in_configuration(
-    state: SDFGState, sdfg: SDFG, affected_nodes: Set[nd.Node]
+    state: SDFGState, sdfg: SDFG,
+    affected_nodes: Set[nd.Node]
 ) -> Set[Union[nd.Node, SDFGState]]:
     subgraph: StateSubgraphView = StateSubgraphView(state, affected_nodes)
     subgraph = _extend_subgraph_with_access_nodes(state, subgraph)
@@ -70,8 +70,8 @@ def _reduce_in_configuration(
     for n in scope:
         if n in subgraph_nodes or n == source:
             for iedge in state.in_edges(n):
-                if (iedge.src not in subgraph_nodes and
-                    isinstance(n, nd.AccessNode)):
+                if (iedge.src not in subgraph_nodes
+                        and isinstance(n, nd.AccessNode)):
                     vol = sdfg.arrays[n.data].total_size
                     if isinstance(vol, sp.Expr):
                         vol = vol.subs(symbols_map)
@@ -80,9 +80,10 @@ def _reduce_in_configuration(
                         proxy[iedge.src][sink]['capacity'] += vol
                         proxy[iedge.src][sink]['orig'].append(iedge)
                     else:
-                        proxy.add_edge(
-                            iedge.src, sink, capacity=vol, orig=[iedge]
-                        )
+                        proxy.add_edge(iedge.src,
+                                       sink,
+                                       capacity=vol,
+                                       orig=[iedge])
         else:
             proxy.add_node(n)
 
@@ -108,9 +109,10 @@ def _reduce_in_configuration(
     if proxy_in_volume > 0:
         proxy.add_edge(source, sink, capacity=proxy_in_volume)
 
-    cut_val, (_, non_reachable) = nx.minimum_cut(
-        proxy, source, sink, flow_func=nx.flow.edmonds_karp
-    )
+    cut_val, (_, non_reachable) = nx.minimum_cut(proxy,
+                                                 source,
+                                                 sink,
+                                                 flow_func=nx.flow.edmonds_karp)
 
     if cut_val < proxy_in_volume * 2:
         reachability_dict = dict(nx.all_pairs_bellman_ford_path_length(proxy))
@@ -130,8 +132,8 @@ def _minimum_dominator_flow_cutout(
 ) -> Tuple[SDFG, TranslationDict]:
     affected_nodes = util.transformation_get_affected_nodes(p_sdfg, xform)
 
-    if (isinstance(xform, SubgraphTransformation) or
-        isinstance(xform, SingleStateTransformation)):
+    if (isinstance(xform, SubgraphTransformation)
+            or isinstance(xform, SingleStateTransformation)):
         if xform.sdfg_id >= 0 and p_sdfg.sdfg_list:
             sdfg = p_sdfg.sdfg_list[xform.sdfg_id]
         else:
@@ -140,13 +142,12 @@ def _minimum_dominator_flow_cutout(
         state = sdfg.node(xform.state_id)
 
         reduced_affected_nodes = _reduce_in_configuration(
-            state, sdfg, affected_nodes
-        )
+            state, sdfg, affected_nodes)
 
         translation_dict: TranslationDict = dict()
-        ct = cutout(
-            *reduced_affected_nodes, translation=translation_dict, state=state
-        )
+        ct = cutout(*reduced_affected_nodes,
+                    translation=translation_dict,
+                    state=state)
         util.translate_transformation(xform, sdfg, ct, translation_dict)
         return ct, translation_dict
     else:
@@ -157,7 +158,8 @@ def _minimum_dominator_flow_cutout(
 
 
 def _minimal_transformation_cutout(
-    p_sdfg: SDFG, xform: Union[SubgraphTransformation, PatternTransformation],
+    p_sdfg: SDFG,
+    xform: Union[SubgraphTransformation, PatternTransformation],
     affected_nodes: Optional[Set[Union[nd.Node, SDFGState]]] = None
 ) -> Tuple[SDFG, TranslationDict]:
     if affected_nodes is None:
@@ -168,20 +170,18 @@ def _minimal_transformation_cutout(
     else:
         sdfg = p_sdfg
 
-    if (isinstance(xform, SubgraphTransformation) or
-        isinstance(xform, SingleStateTransformation)):
+    if (isinstance(xform, SubgraphTransformation)
+            or isinstance(xform, SingleStateTransformation)):
         state = sdfg.node(xform.state_id)
         translation_dict: TranslationDict = dict()
-        ct = cutout(
-            *affected_nodes, translation=translation_dict, state=state
-        )
+        ct = cutout(*affected_nodes, translation=translation_dict, state=state)
         util.translate_transformation(xform, sdfg, ct, translation_dict)
         return ct, translation_dict
     elif isinstance(xform, MultiStateTransformation):
         translation_dict: TranslationDict = dict()
-        ct: SDFG = cutout(
-            *affected_nodes, translation=translation_dict, state=None
-        )
+        ct: SDFG = cutout(*affected_nodes,
+                          translation=translation_dict,
+                          state=None)
         o_sdfg = list(affected_nodes)[0].parent
         util.translate_transformation(xform, o_sdfg, ct, translation_dict)
         return ct, translation_dict
@@ -312,31 +312,24 @@ def multistate_cutout(
     for is_edge in subgraph.edges():
         if is_edge.src not in inserted_states:
             inserted_states[is_edge.src] = create_element(is_edge.src)
-            new_sdfg.add_node(
-                inserted_states[is_edge.src],
-                is_start_state=(is_edge.src == start_state)
-            )
+            new_sdfg.add_node(inserted_states[is_edge.src],
+                              is_start_state=(is_edge.src == start_state))
             inserted_states[is_edge.src].parent = new_sdfg
         if is_edge.dst not in inserted_states:
             inserted_states[is_edge.dst] = create_element(is_edge.dst)
-            new_sdfg.add_node(
-                inserted_states[is_edge.dst],
-                is_start_state=(is_edge.dst == start_state)
-            )
+            new_sdfg.add_node(inserted_states[is_edge.dst],
+                              is_start_state=(is_edge.dst == start_state))
             inserted_states[is_edge.dst].parent = new_sdfg
-        new_sdfg.add_edge(
-            inserted_states[is_edge.src],
-            inserted_states[is_edge.dst],
-            create_element(is_edge.data)
-        )
+        new_sdfg.add_edge(inserted_states[is_edge.src],
+                          inserted_states[is_edge.dst],
+                          create_element(is_edge.data))
 
     # Add remaining necessary states.
     for state in subgraph.nodes():
         if state not in inserted_states:
             inserted_states[state] = create_element(state)
-            new_sdfg.add_node(
-                inserted_states[state], is_start_state=(state == start_state)
-            )
+            new_sdfg.add_node(inserted_states[state],
+                              is_start_state=(state == start_state))
             inserted_states[state].parent = new_sdfg
 
     inserted_states[sdfg.sdfg_id] = new_sdfg.sdfg_id
@@ -351,10 +344,10 @@ def multistate_cutout(
     return new_sdfg
 
 
-def cutout_state(
-    state: SDFGState, *nodes: nd.Node, make_copy: bool = True,
-    inserted_nodes: TranslationDict = None
-) -> SDFG:
+def cutout_state(state: SDFGState,
+                 *nodes: nd.Node,
+                 make_copy: bool = True,
+                 inserted_nodes: TranslationDict = None) -> SDFG:
     """
     Cut out a subgraph of a state from an SDFG to run separately for localized
     testing or optimization.
@@ -406,10 +399,9 @@ def cutout_state(
             inserted_nodes[e.src] = create_element(e.src)
         if e.dst not in inserted_nodes:
             inserted_nodes[e.dst] = create_element(e.dst)
-        new_state.add_edge(
-            inserted_nodes[e.src], e.src_conn, inserted_nodes[e.dst],
-            e.dst_conn, create_element(e.data)
-        )
+        new_state.add_edge(inserted_nodes[e.src], e.src_conn,
+                           inserted_nodes[e.dst], e.dst_conn,
+                           create_element(e.data))
 
     # Insert remaining isolated nodes
     for n in subgraph.nodes():
@@ -423,42 +415,36 @@ def cutout_state(
     for orig_node in inserted_nodes.keys():
         new_node = inserted_nodes[orig_node]
         if isinstance(orig_node, (nd.EntryNode, nd.ExitNode)):
-            used_connectors = set(
-                e.dst_conn for e in new_state.in_edges(new_node)
-            )
+            used_connectors = set(e.dst_conn
+                                  for e in new_state.in_edges(new_node))
             for conn in (new_node.in_connectors.keys() - used_connectors):
                 new_node.remove_in_connector(conn)
-            used_connectors = set(
-                e.src_conn for e in new_state.out_edges(new_node)
-            )
+            used_connectors = set(e.src_conn
+                                  for e in new_state.out_edges(new_node))
             for conn in (new_node.out_connectors.keys() - used_connectors):
                 new_node.remove_out_connector(conn)
         else:
-            used_connectors = set(
-                e.dst_conn for e in new_state.in_edges(new_node)
-            )
+            used_connectors = set(e.dst_conn
+                                  for e in new_state.in_edges(new_node))
             for conn in (new_node.in_connectors.keys() - used_connectors):
                 for e in state.in_edges(orig_node):
                     if e.dst_conn and e.dst_conn == conn:
                         _create_alibi_access_node_for_edge(
                             new_sdfg, new_state, sdfg, e, None, None, new_node,
-                            conn
-                        )
+                            conn)
                         prune = False
                         break
                 if prune:
                     new_node.remove_in_connector(conn)
-            used_connectors = set(
-                e.src_conn for e in new_state.out_edges(new_node)
-            )
+            used_connectors = set(e.src_conn
+                                  for e in new_state.out_edges(new_node))
             for conn in (new_node.out_connectors.keys() - used_connectors):
                 prune = True
                 for e in state.out_edges(orig_node):
                     if e.src_conn and e.src_conn == conn:
                         _create_alibi_access_node_for_edge(
                             new_sdfg, new_state, sdfg, e, new_node, conn, None,
-                            None
-                        )
+                            None)
                         prune = False
                         break
                 if prune:
@@ -471,11 +457,11 @@ def cutout_state(
 
 
 def _create_alibi_access_node_for_edge(
-    target_sdfg: SDFG, target_state: SDFGState, original_sdfg: SDFG,
-    original_edge: MultiConnectorEdge[Memlet], from_node: Union[nd.Node, None],
-    from_connector: Union[str, None], to_node: Union[nd.Node, None],
-    to_connector: Union[str, None]
-) -> data.Data:
+        target_sdfg: SDFG, target_state: SDFGState, original_sdfg: SDFG,
+        original_edge: MultiConnectorEdge[Memlet],
+        from_node: Union[nd.Node, None], from_connector: Union[str, None],
+        to_node: Union[nd.Node, None], to_connector: Union[str,
+                                                           None]) -> data.Data:
     print('making an alibi node')
     """
     Add an alibi data container and access node to a dangling connector inside
@@ -484,16 +470,13 @@ def _create_alibi_access_node_for_edge(
     original_edge.data
     access_size = original_edge.data.subset.size_exact()
     container_name = '__cutout_' + str(original_edge.data.data)
-    container_name = data.find_new_name(
-        container_name, target_sdfg._arrays.keys()
-    )
+    container_name = data.find_new_name(container_name,
+                                        target_sdfg._arrays.keys())
     original_array = original_sdfg._arrays[original_edge.data.data]
     memlet_str = ''
     if original_edge.data.subset.num_elements_exact() > 1:
         access_size = original_edge.data.subset.size_exact()
-        target_sdfg.add_array(
-            container_name, access_size, original_array.dtype
-        )
+        target_sdfg.add_array(container_name, access_size, original_array.dtype)
         memlet_str = container_name + '['
         sep = None
         for dim_len in original_edge.data.subset.bounding_box_size():
@@ -510,22 +493,15 @@ def _create_alibi_access_node_for_edge(
         memlet_str = container_name + '[0]'
     alibi_access_node = target_state.add_access(container_name)
     if from_node is None:
-        target_state.add_edge(
-            alibi_access_node, None, to_node, to_connector, Memlet(
-                memlet_str
-            )
-        )
+        target_state.add_edge(alibi_access_node, None, to_node, to_connector,
+                              Memlet(memlet_str))
     else:
-        target_state.add_edge(
-            from_node, from_connector, alibi_access_node, None, Memlet(
-                memlet_str
-            )
-        )
+        target_state.add_edge(from_node, from_connector, alibi_access_node,
+                              None, Memlet(memlet_str))
 
 
 def _extend_subgraph_with_access_nodes(
-    state: SDFGState, subgraph: StateSubgraphView
-) -> StateSubgraphView:
+        state: SDFGState, subgraph: StateSubgraphView) -> StateSubgraphView:
     """
     Expands a subgraph view to include necessary input/output access nodes,
     using memlet paths.
@@ -545,15 +521,15 @@ def _extend_subgraph_with_access_nodes(
             continue
         for e in state.in_edges(node):
             # Special case: IN_* connectors are not traversed further
-            if (isinstance(e.dst, (nd.EntryNode, nd.ExitNode)) and
-                (e.dst_conn is None or e.dst_conn.startswith('IN_'))):
+            if (isinstance(e.dst, (nd.EntryNode, nd.ExitNode))
+                    and (e.dst_conn is None or e.dst_conn.startswith('IN_'))):
                 continue
 
             # We don't want to extend access nodes over scope entry nodes, but
             # rather we want to introduce alibi data containers for the correct
             # subset instead. Handled separately.
-            if (isinstance(e.src, nd.EntryNode) and e.src not in result and
-                state.exit_node(e.src) not in result):
+            if (isinstance(e.src, nd.EntryNode) and e.src not in result
+                    and state.exit_node(e.src) not in result):
                 continue
             else:
                 mpath = state.memlet_path(e)
@@ -565,15 +541,15 @@ def _extend_subgraph_with_access_nodes(
 
         for e in state.out_edges(node):
             # Special case: OUT_* connectors are not traversed further
-            if (isinstance(e.src, (nd.EntryNode, nd.ExitNode)) and
-                (e.src_conn is None or e.src_conn.startswith('OUT_'))):
+            if (isinstance(e.src, (nd.EntryNode, nd.ExitNode))
+                    and (e.src_conn is None or e.src_conn.startswith('OUT_'))):
                 continue
 
             # We don't want to extend access nodes over scope entry nodes, but
             # rather we want to introduce alibi data containers for the correct
             # subset instead. Handled separately.
-            if (isinstance(e.dst, nd.ExitNode) and e.dst not in result and
-                state.entry_node(e.dst) not in result):
+            if (isinstance(e.dst, nd.ExitNode) and e.dst not in result
+                    and state.entry_node(e.dst) not in result):
                 continue
             else:
                 mpath = state.memlet_path(e)
@@ -586,18 +562,22 @@ def _extend_subgraph_with_access_nodes(
     # Check for mismatch in scopes
     for node in result:
         enode = None
-        if isinstance(node, nd.EntryNode) and state.exit_node(node) not in result:
+        if isinstance(node,
+                      nd.EntryNode) and state.exit_node(node) not in result:
             enode = state.exit_node(node)
-        if isinstance(node, nd.ExitNode) and state.entry_node(node) not in result:
+        if isinstance(node,
+                      nd.ExitNode) and state.entry_node(node) not in result:
             enode = state.entry_node(node)
         if enode is not None:
-            raise ValueError(f'Cutout cannot expand graph implicitly since "{node}" is in the graph and "{enode}" is '
-                             'not. Please provide more nodes in the subgraph as necessary.')
+            raise ValueError(
+                f'Cutout cannot expand graph implicitly since "{node}" is in the graph and "{enode}" is '
+                'not. Please provide more nodes in the subgraph as necessary.')
 
     return StateSubgraphView(state, result)
 
 
-def _containers_defined_outside(sdfg: SDFG, state: SDFGState, subgraph: StateSubgraphView) -> Set[str]:
+def _containers_defined_outside(sdfg: SDFG, state: SDFGState,
+                                subgraph: StateSubgraphView) -> Set[str]:
     """ Returns a list of containers set outside the given subgraph. """
     # Since we care about containers that are written to, we only need to look at access nodes rather than interstate
     # edges
@@ -616,21 +596,21 @@ def _containers_defined_outside(sdfg: SDFG, state: SDFGState, subgraph: StateSub
     return result
 
 
-def cutout(
-    *nodes: Union[nd.Node, SDFGState], translation: TranslationDict,
-    state: Optional[SDFGState] = None
-) -> SDFG:
+def cutout(*nodes: Union[nd.Node, SDFGState],
+           translation: TranslationDict,
+           state: Optional[SDFGState] = None) -> SDFG:
     if state is not None:
         if any([isinstance(n, SDFGState) for n in nodes]):
             raise Exception(
-                'Mixing cutout nodes of type Node and SDFGState is not allowed'
-            )
-        new_sdfg = cutout_state(state, *nodes, make_copy=True, inserted_nodes=translation)
+                'Mixing cutout nodes of type Node and SDFGState is not allowed')
+        new_sdfg = cutout_state(state,
+                                *nodes,
+                                make_copy=True,
+                                inserted_nodes=translation)
     else:
         if any([isinstance(n, nd.Node) for n in nodes]):
             raise Exception(
-                'Mixing cutout nodes of type Node and SDFGState is not allowed'
-            )
+                'Mixing cutout nodes of type Node and SDFGState is not allowed')
         new_sdfg = multistate_cutout(*nodes, inserted_states=translation)
 
     # Ensure the parent relationships and SDFG list is correct.
@@ -678,27 +658,44 @@ def _determine_state_input_config(sdfg: SDFG, state: SDFGState) -> Set[str]:
     return input_configuration
 
 
-def cutout_determine_input_config(
-    ct: SDFG, sdfg: SDFG, translation_dict: TranslationDict,
-    system_state: Set[str] = None
-) -> Set[str]:
+def determine_cutout_reachability(
+    ct: SDFG,
+    sdfg: SDFG,
+    translation_dict: TranslationDict,
+    inverse_translation: TranslationDict,
+    state_reach: Dict[SDFGState, Set[SDFGState]] = None
+) -> Tuple[Set[SDFGState], Set[SDFGState]]:
+    if state_reach is None:
+        original_sdfg_id = inverse_translation[sdfg.sdfg_id]
+        state_reachability_dict = StateReachability().apply_pass(
+            sdfg.sdfg_list[original_sdfg_id], None
+        )
+        state_reach = state_reachability_dict[original_sdfg_id]
+    inverse_cutout_reach: Set[SDFGState] = set()
+    cutout_reach: Set[SDFGState] = set()
+    cutout_states = set(ct.states())
+    for state in cutout_states:
+        original_state = inverse_translation[state]
+        for k, v in state_reach.items():
+            if (k not in translation_dict
+                    or translation_dict[k] not in cutout_states):
+                if original_state is not None and original_state in v:
+                    inverse_cutout_reach.add(k)
+        for rstate in state_reach[original_state]:
+            if (rstate not in translation_dict
+                    or translation_dict[rstate] not in cutout_states):
+                cutout_reach.add(rstate)
+    return [inverse_cutout_reach, cutout_reach]
+
+
+def cutout_determine_input_config(ct: SDFG,
+                                  inverse_cutout_reach: Set[SDFGState],
+                                  translation_dict: TranslationDict,
+                                  system_state: Set[str] = None) -> Set[str]:
     input_configuration = set()
 
     check_for_write_before = set()
 
-    original_sdfg_id = None
-    for k, v in translation_dict.items():
-        if v == sdfg.sdfg_id:
-            original_sdfg_id = k
-            break
-    if original_sdfg_id is None:
-        raise KeyError('Could not find SDFG ID in translation')
-
-    state_reach_sdfgs = StateReachability().apply_pass(
-        sdfg.sdfg_list[original_sdfg_id], None
-    )
-    state_reach = state_reach_sdfgs[original_sdfg_id]
-    inverse_cutout_reach: Set[SDFGState] = set()
     cutout_states = set(ct.states())
 
     must_have_descriptors = set()
@@ -727,17 +724,10 @@ def cutout_determine_input_config(
             if v == state:
                 original_state = k
                 break
-        for k, v in state_reach.items():
-            if ((k not in translation_dict or
-                 translation_dict[k] not in cutout_states)
-                 and original_state is not None and original_state in v):
-                inverse_cutout_reach.add(k)
 
         # If the cutout consists of only one state, we need to check inside the
         # same state of the original SDFG as well.
-        if len(cutout_states) == 1:
-            if original_state is None:
-                raise KeyError('Could not find state in translation')
+        if len(cutout_states) == 1 and original_state is not None:
             for dn in original_state.data_nodes():
                 if original_state.in_degree(dn) > 0:
                     iedges = original_state.in_edges(dn)
@@ -766,25 +756,12 @@ def cutout_determine_input_config(
 
 
 def cutout_determine_system_state(
-    ct: SDFG, sdfg: SDFG, translation_dict: TranslationDict
+    ct: SDFG, cutout_reach: Set[SDFGState], translation_dict: TranslationDict
 ) -> Set[str]:
     system_state = set()
 
     check_for_read_after = set()
 
-    original_sdfg_id = None
-    for k, v in translation_dict.items():
-        if v == sdfg.sdfg_id:
-            original_sdfg_id = k
-            break
-    if original_sdfg_id is None:
-        raise KeyError('Could not find SDFG ID in translation')
-
-    state_reach_sdfgs = StateReachability().apply_pass(
-        sdfg.sdfg_list[original_sdfg_id], None
-    )
-    state_reach = state_reach_sdfgs[original_sdfg_id]
-    cutout_reach: Set[SDFGState] = set()
     cutout_states = set(ct.states())
 
     for state in cutout_states:
@@ -805,10 +782,6 @@ def cutout_determine_system_state(
                 break
         if original_state is None:
             raise KeyError('Could not find state in translation')
-        for rstate in state_reach[original_state]:
-            if (rstate not in translation_dict or
-                translation_dict[rstate] not in cutout_states):
-                cutout_reach.add(rstate)
 
         # If the cutout consists of only one state, we need to check inside the
         # same state of the original SDFG as well.

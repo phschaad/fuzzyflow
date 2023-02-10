@@ -3,7 +3,8 @@
 # License. For details, see the LICENSE file.
 
 from copy import deepcopy
-from typing import Dict, List, Union, Optional, Any
+from collections import deque
+from typing import Dict, List, Union, Optional, Set
 import os
 import numpy as np
 from tqdm import tqdm
@@ -14,18 +15,21 @@ import dace
 from dace import config, dtypes
 from dace.codegen.compiled_sdfg import CompiledSDFG
 from dace.data import Scalar
-from dace.sdfg import SDFG
+from dace.sdfg import SDFG, SDFGState
 from dace.sdfg import nodes as nd
 from dace.transformation.transformation import (PatternTransformation,
                                                 SubgraphTransformation)
 from dace.symbolic import pystr_to_symbolic
 from dace.sdfg.validation import InvalidSDFGError
+from dace.transformation.passes.analysis import StateReachability
+from dace.codegen.instrumentation.data.data_report import InstrumentedDataReport
 
 from fuzzyflow.cutout import (CutoutStrategy,
                               TranslationDict,
                               cutout_determine_input_config,
                               cutout_determine_system_state,
-                              find_cutout_for_transformation)
+                              find_cutout_for_transformation,
+                              determine_cutout_reachability)
 from fuzzyflow.runner import run_subprocess_precompiled
 from fuzzyflow.util import StatusLevel, apply_transformation, cutout_determine_symbol_constraints
 from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
@@ -33,6 +37,7 @@ from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
 
 class FailureReason(Enum):
     FAILED_VALIDATE = 'FAILED_VALIDATE'
+    COMPILATION_FAILURE = 'COMPILATION_FAILURE'
     EXIT_CODE_MISMATCH = 'EXIT_CODE_MISMATCH'
     SYSTEM_STATE_MISMATCH = 'SYSTEM_STATE_MISMATCH'
 
@@ -48,6 +53,10 @@ class TransformationVerifier:
     _cutout: SDFG = None
     _original_cutout: SDFG = None
     _translation_dict: TranslationDict = None
+    _inverse_translation_dict: TranslationDict = None
+    _states_reached_by_cutout: Set[SDFGState] = set()
+    _states_reaching_cutout: Set[SDFGState] = set()
+    _state_reachability_dict: Dict[int, Dict[SDFGState, Set[SDFGState]]] = None
 
     def __init__(
         self,
@@ -82,6 +91,22 @@ class TransformationVerifier:
                 self.sdfg, self.xform, self.cutout_strategy
             )
 
+            self._inverse_translation_dict = dict()
+            for k, v in self._translation_dict.items():
+                self._inverse_translation_dict[v] = k
+
+            original_sdfg_id = self._inverse_translation_dict[self.sdfg.sdfg_id]
+            self._state_reachability_dict = StateReachability().apply_pass(
+                self.sdfg.sdfg_list[original_sdfg_id], None
+            )
+            state_reach = self._state_reachability_dict[original_sdfg_id]
+            (
+                self._states_reaching_cutout, self._states_reached_by_cutout
+            ) = determine_cutout_reachability(
+                self._cutout, self.sdfg, self._translation_dict,
+                self._inverse_translation_dict, state_reach
+            )
+
             in_nodes: List[nd.AccessNode] = self._cutout.input_arrays()
             for in_node in in_nodes:
                 self._cutout.arrays[in_node.data].transient = False
@@ -94,10 +119,26 @@ class TransformationVerifier:
         return self._cutout
 
 
+    def _data_report_get_latest_version(
+        self, report: InstrumentedDataReport, item: str
+    ) -> dace.data.ArrayLike:
+        filenames = report.files[item]
+        desc = report.sdfg.arrays[item]
+        dtype: dtypes.typeclass = desc.dtype
+        npdtype = dtype.as_numpy_dtype()
+
+        file = deque(iter(filenames), maxlen=1).pop()
+        nparr, view = report._read_file(file, npdtype)
+        report.loaded_arrays[item, -1] = nparr
+        return view
+
+
     def _catch_failure(
         self, reason: FailureReason, details: Optional[str]
     ) -> None:
         if self.output_dir:
+            os.makedirs(self.output_dir, exist_ok=True)
+
             # Save SDFGs for cutout both before and after transforming.
             self._original_cutout.save(
                 os.path.join(self.output_dir, 'pre.sdfg')
@@ -129,10 +170,10 @@ class TransformationVerifier:
         cutout = self.cutout(status=status)
 
         system_state = cutout_determine_system_state(
-            cutout, self.sdfg, self._translation_dict
+            cutout, self._states_reached_by_cutout, self._translation_dict
         )
         original_input_configuration = cutout_determine_input_config(
-            cutout, self.sdfg, self._translation_dict
+            cutout, self._states_reaching_cutout, self._translation_dict
         )
 
         self._original_cutout = deepcopy(cutout)
@@ -154,7 +195,8 @@ class TransformationVerifier:
                 cutout.add_datadesc(dat, orig_array)
 
         xformed_input_configuration = cutout_determine_input_config(
-            cutout, self.sdfg, self._translation_dict, system_state
+            cutout, self._states_reaching_cutout, self._translation_dict,
+            system_state
         )
 
         # Instrumentation
@@ -184,7 +226,15 @@ class TransformationVerifier:
         prog_orig: CompiledSDFG = self._original_cutout.compile()
         if status >= StatusLevel.DEBUG:
             print('Compiling post-transformation cutout')
-        prog_xformed: CompiledSDFG = cutout.compile(validate=False)
+        prog_xformed: CompiledSDFG = None
+        try:
+            prog_xformed = cutout.compile(validate=True)
+        except InvalidSDFGError as e:
+            self._catch_failure(FailureReason.FAILED_VALIDATE, str(e))
+            return False
+        except Exception as e:
+            self._catch_failure(FailureReason.COMPILATION_FAILURE, str(e))
+            return False
         if status >= StatusLevel.DEBUG:
             print(
                 'Verifying transformation over', n_samples,
@@ -281,6 +331,7 @@ class TransformationVerifier:
                     bar.write(
                         'Collecting pre-transformation cutout data reports'
                     )
+                orig_drep: InstrumentedDataReport = None
                 orig_drep = self._original_cutout.get_instrumented_data()
 
                 xformed_containers = dict()
@@ -303,6 +354,7 @@ class TransformationVerifier:
                     bar.write(
                         'Collecting post-transformation cutout data reports'
                     )
+                xformed_drep: InstrumentedDataReport = None
                 xformed_drep = cutout.get_instrumented_data()
 
                 if status >= StatusLevel.VERBOSE:
@@ -322,9 +374,14 @@ class TransformationVerifier:
                     for dat in system_state:
 
                         try:
-                            oval = orig_drep.get_latest_version(dat)
+                            oval = self._data_report_get_latest_version(
+                                orig_drep, dat
+                            )
+
                             if dat in xformed_drep.files:
-                                nval = xformed_drep.get_latest_version(dat)
+                                nval = self._data_report_get_latest_version(
+                                    xformed_drep, dat
+                                )
                             else:
                                 if dat not in inputs:
                                     if status >= StatusLevel.VERBOSE:

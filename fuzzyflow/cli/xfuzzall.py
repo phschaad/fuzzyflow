@@ -165,7 +165,6 @@ def main():
                 instance_out_path = os.path.join(
                     output_dir, xf_name + '_' + str(i)
                 )
-                os.makedirs(instance_out_path, exist_ok=True)
             verifier = TransformationVerifier(
                 match, sdfg, args.cutout_strategy, args.sampling_strategy,
                 instance_out_path
@@ -243,7 +242,6 @@ def main():
                 instance_out_path = os.path.join(
                     output_dir, xf_name + '_' + str(i)
                 )
-                os.makedirs(instance_out_path, exist_ok=True)
             verifier = TransformationVerifier(
                 match, sdfg, args.cutout_strategy, args.sampling_strategy,
                 instance_out_path
