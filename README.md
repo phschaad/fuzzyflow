@@ -49,7 +49,7 @@ To verify every instance of a transformation on a given program, you need:
 
 Run the verification with the following command:
 
-`python -m fuzzyflow.cli.xfuzz -p <PATH_TO_SDFG> -t <TRANSFORMATION_DESCRIPTOR>`
+`python -m fuzzyflow.cli.xfuzzall -p <PATH_TO_SDFG> -t <TRANSFORMATION_DESCRIPTOR>`
 
 You can additionally provide a path to an output folder via `-o`/`--output`.
 This folder will be created when the verification procedure starts, and will be
