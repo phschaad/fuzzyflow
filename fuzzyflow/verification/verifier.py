@@ -15,8 +15,8 @@ import dace
 from dace import config, dtypes
 from dace.codegen.compiled_sdfg import CompiledSDFG
 from dace.data import Scalar
-from dace.sdfg import SDFG, SDFGState
-from dace.sdfg import nodes as nd
+from dace.sdfg import SDFG, nodes as nd
+from dace.sdfg.analysis.cutout import SDFGCutout
 from dace.transformation.transformation import (PatternTransformation,
                                                 SubgraphTransformation)
 from dace.symbolic import pystr_to_symbolic
@@ -24,14 +24,10 @@ from dace.sdfg.validation import InvalidSDFGError
 from dace.transformation.passes.analysis import StateReachability
 from dace.codegen.instrumentation.data.data_report import InstrumentedDataReport
 
-from fuzzyflow.cutout import (CutoutStrategy,
-                              TranslationDict,
-                              cutout_determine_input_config,
-                              cutout_determine_system_state,
-                              find_cutout_for_transformation,
-                              determine_cutout_reachability)
 from fuzzyflow.runner import run_subprocess_precompiled
-from fuzzyflow.util import StatusLevel, apply_transformation, cutout_determine_symbol_constraints
+from fuzzyflow.util import (StatusLevel,
+                            apply_transformation,
+                            cutout_determine_symbol_constraints)
 from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
 
 
@@ -46,76 +42,33 @@ class TransformationVerifier:
 
     xform: Union[SubgraphTransformation, PatternTransformation] = None
     sdfg: SDFG = None
-    cutout_strategy: CutoutStrategy = CutoutStrategy.SIMPLE
     sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM
     output_dir: Optional[str] = None
 
-    _cutout: SDFG = None
-    _original_cutout: SDFG = None
-    _translation_dict: TranslationDict = None
-    _inverse_translation_dict: TranslationDict = None
-    _states_reached_by_cutout: Set[SDFGState] = set()
-    _states_reaching_cutout: Set[SDFGState] = set()
-    _state_reachability_dict: Dict[int, Dict[SDFGState, Set[SDFGState]]] = None
+    _cutout: Union[SDFG, SDFGCutout] = None
+    _original_cutout: Union[SDFG, SDFGCutout] = None
 
     def __init__(
         self,
         xform: Union[SubgraphTransformation, PatternTransformation],
         sdfg: SDFG,
-        cutout_strategy: CutoutStrategy = CutoutStrategy.SIMPLE,
         sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM,
         output_dir: Optional[str] = None,
     ):
         self.xform = xform
         self.sdfg = sdfg
-        self.cutout_strategy = cutout_strategy
         self.sampling_strategy = sampling_strategy
         self.output_dir = output_dir
 
-
     def cutout(
-        self, strategy: CutoutStrategy = None,
-        status: StatusLevel = StatusLevel.OFF
-    ) -> SDFG:
-        recut = False
-        if strategy is not None and strategy != self.cutout_strategy:
-            self.cutout_strategy = strategy
-            recut = True
-
-        if self._cutout is None or recut:
+        self, status: StatusLevel = StatusLevel.OFF
+    ) -> Union[SDFG, SDFGCutout]:
+        if self._cutout is None:
             if status >= StatusLevel.DEBUG:
                 print('Finding ideal cutout')
-            (
-                self._cutout, self._translation_dict
-            ) = find_cutout_for_transformation(
-                self.sdfg, self.xform, self.cutout_strategy
-            )
-
-            self._inverse_translation_dict = dict()
-            for k, v in self._translation_dict.items():
-                self._inverse_translation_dict[v] = k
-
-            original_sdfg_id = self._inverse_translation_dict[self.sdfg.sdfg_id]
-            self._state_reachability_dict = StateReachability().apply_pass(
-                self.sdfg.sdfg_list[original_sdfg_id], None
-            )
-            state_reach = self._state_reachability_dict[original_sdfg_id]
-            (
-                self._states_reaching_cutout, self._states_reached_by_cutout
-            ) = determine_cutout_reachability(
-                self._cutout, self.sdfg, self._translation_dict,
-                self._inverse_translation_dict, state_reach
-            )
-
-            in_nodes: List[nd.AccessNode] = self._cutout.input_arrays()
-            for in_node in in_nodes:
-                self._cutout.arrays[in_node.data].transient = False
-            out_nodes: List[nd.AccessNode] = self._cutout.output_arrays()
-            for out_node in out_nodes:
-                self._cutout.arrays[out_node.data].transient = False
+            self._cutout = SDFGCutout.from_transformation(self.sdfg, self.xform)
             if status >= StatusLevel.DEBUG:
                 print('Cutout obtained')
-
         return self._cutout
 
 
@@ -128,8 +81,8 @@ class TransformationVerifier:
         npdtype = dtype.as_numpy_dtype()
 
         file = deque(iter(filenames), maxlen=1).pop()
-        nparr, view = report._read_file(file, npdtype)
-        report.loaded_arrays[item, -1] = nparr
+        nparr, view = report._read_array_file(file, npdtype)
+        report.loaded_values[item, -1] = nparr
         return view
 
 
@@ -168,15 +121,8 @@ class TransformationVerifier:
         symbol_constraints: Dict = None, data_constraints: Dict = None
     ) -> bool:
         cutout = self.cutout(status=status)
-
-        system_state = cutout_determine_system_state(
-            cutout, self._states_reached_by_cutout, self._translation_dict
-        )
-        original_input_configuration = cutout_determine_input_config(
-            cutout, self._states_reaching_cutout, self._translation_dict
-        )
-
-        self._original_cutout = deepcopy(cutout)
+        orig_cutout = deepcopy(cutout)
+        self._original_cutout = orig_cutout
         if status >= StatusLevel.DEBUG:
             print('Applying transformation')
         try:
@@ -185,45 +131,53 @@ class TransformationVerifier:
             self._catch_failure(FailureReason.FAILED_VALIDATE, str(e))
             return False
 
-        for dat in system_state:
-            if dat not in cutout.arrays.keys():
-                print(
-                    'Warning: Transformation removed something from system ' +
-                    'state!'
-                )
-                orig_array = self._original_cutout.arrays[dat]
-                cutout.add_datadesc(dat, orig_array)
+        cutout._name = cutout.name + '_transformed'
 
-        xformed_input_configuration = cutout_determine_input_config(
-            cutout, self._states_reaching_cutout, self._translation_dict,
-            system_state
-        )
+        if isinstance(orig_cutout, SDFGCutout):
+            for name in orig_cutout.output_config:
+                if name not in cutout.arrays:
+                    print(
+                        'Warning: Transformation removed something from the ' +
+                        'output configuration!'
+                    )
+                    cutout.add_datadesc(name, orig_cutout.arrays[name])
+        else:
+            # Cutout is equivalent to the entire SDFG.
+            for name, desc in orig_cutout.arrays.items():
+                if not desc.transient:
+                    if (name not in cutout.arrays or
+                        not cutout.arrays[name].transient):
+                        print(
+                            'Warning: Transformation removed something from ' +
+                            'the output configuration!'
+                        )
+                        cutout.add_datadesc(name, orig_cutout.arrays[name])
 
-        # Instrumentation
+        # Instrumentation.
         for s in cutout.states():
             for dn in s.data_nodes():
-                if dn.data in system_state:
+                if dn.data in cutout.output_config:
                     dn.instrument = dtypes.DataInstrumentationType.Save
-        for s in self._original_cutout.states():
+        for s in orig_cutout.states():
             for dn in s.data_nodes():
-                if dn.data in system_state:
+                if dn.data in orig_cutout.output_config:
                     dn.instrument = dtypes.DataInstrumentationType.Save
 
         if debug_save_path is not None:
             self._original_cutout.save(debug_save_path + '_orig.sdfg')
             cutout.save(debug_save_path + '_xformed.sdfg')
 
-        ##if not xformed_input_configuration.issubset(
-        ##    original_input_configuration
-        ##):
-        ##    print(
-        ##        'Failed due to invalid input configuration after transforming!'
-        ##    )
-        ##    return False
-
         if status >= StatusLevel.DEBUG:
             print('Compiling pre-transformation cutout')
-        prog_orig: CompiledSDFG = self._original_cutout.compile()
+        prog_orig: CompiledSDFG = None
+        try:
+            prog_orig = orig_cutout.compile()
+        except InvalidSDFGError as e:
+            print('Failure during validation of original cutout')
+            raise e
+        except Exception as e:
+            print('Failure during compilation')
+            raise e
         if status >= StatusLevel.DEBUG:
             print('Compiling post-transformation cutout')
         prog_xformed: CompiledSDFG = None
@@ -269,8 +223,8 @@ class TransformationVerifier:
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Sampling symbols')
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
-                    self._original_cutout,
-                    constraints_map=cutout_symbol_constraints, maxval=256
+                    orig_cutout, constraints_map=cutout_symbol_constraints,
+                    maxval=256
                 )
 
                 constraints_map = None
@@ -282,9 +236,27 @@ class TransformationVerifier:
 
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Sampling inputs')
+                orig_in_config: Set[str] = set()
+                new_in_config: Set[str] = set()
+                output_config: Set[str] = set()
+                if isinstance(orig_cutout, SDFGCutout):
+                    orig_in_config = orig_cutout.input_config
+                    output_config = orig_cutout.output_config
+                else:
+                    for name, desc in orig_cutout.arrays.items():
+                        if not desc.transient:
+                            orig_in_config.add(name)
+                            output_config.add(name)
+                if isinstance(cutout, SDFGCutout):
+                    new_in_config = cutout.input_config
+                else:
+                    for name, desc in cutout.arrays.items():
+                        if not desc.transient:
+                            new_in_config.add(name)
+
                 inputs = sampler.sample_inputs(
-                    self._original_cutout, original_input_configuration,
-                    symbols_map, decay_by, constraints_map=constraints_map
+                    orig_cutout, orig_in_config, symbols_map, decay_by,
+                    constraints_map=constraints_map
                 )
 
                 if status >= StatusLevel.VERBOSE:
@@ -293,7 +265,7 @@ class TransformationVerifier:
                     )
                 inputs_xformed = dict()
                 for k, v in inputs.items():
-                    if k in xformed_input_configuration:
+                    if k in new_in_config:
                         inputs_xformed[k] = deepcopy(v)
 
                 if status >= StatusLevel.VERBOSE:
@@ -301,16 +273,14 @@ class TransformationVerifier:
                         'Generating outputs for pre-transformation cutout'
                     )
                 out_orig = sampler.generate_output_containers(
-                    self._original_cutout, system_state,
-                    original_input_configuration, symbols_map
+                    orig_cutout, output_config, orig_in_config, symbols_map
                 )
                 if status >= StatusLevel.VERBOSE:
                     bar.write(
                         'Generating outputs for post-transformation cutout'
                     )
                 out_xformed = sampler.generate_output_containers(
-                    cutout, system_state, xformed_input_configuration,
-                    symbols_map
+                    cutout, output_config, new_in_config, symbols_map
                 )
 
                 orig_containers = dict()
@@ -332,7 +302,7 @@ class TransformationVerifier:
                         'Collecting pre-transformation cutout data reports'
                     )
                 orig_drep: InstrumentedDataReport = None
-                orig_drep = self._original_cutout.get_instrumented_data()
+                orig_drep = orig_cutout.get_instrumented_data()
 
                 xformed_containers = dict()
                 for k in inputs.keys():
@@ -371,8 +341,7 @@ class TransformationVerifier:
                     return False
                 elif ret_orig == 0 and ret_xformed == 0:
                     resample = False
-                    for dat in system_state:
-
+                    for dat in output_config:
                         try:
                             oval = self._data_report_get_latest_version(
                                 orig_drep, dat
@@ -422,7 +391,7 @@ class TransformationVerifier:
                                         f'Mismatching results for ${dat}'
                                     )
                                     return False
-                        except:
+                        except KeyError:
                             print(
                                 'WARNING: Missing instrumentation on system ' +
                                 'state for container',
@@ -493,7 +462,7 @@ class TransformationVerifier:
             config.Config.set('compiler', 'allow_view_arguments', value=True)
             config.Config.set('profiling', value=False)
             config.Config.set('debugprint', value=False)
-            config.Config.set('cache', value='hash')
+            config.Config.set('cache', value='name')
             return self._do_verify(
                 n_samples, status, debug_save_path, enforce_finiteness,
                 symbol_constraints, data_constraints

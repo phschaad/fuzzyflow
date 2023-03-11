@@ -2,23 +2,22 @@
 # This file is part of FuzzyFlow, which is released under the BSD 3-Clause
 # License. For details, see the LICENSE file.
 
+import json
 from enum import Enum
 from functools import total_ordering
-import json
-from typing import Dict, Generator, List, Set, Tuple, Union
+from typing import Dict, List, Set, Tuple, Union
 
 from dace import serialize
-from dace.sdfg import SDFG, SDFGState, ScopeSubgraphView
+from dace.sdfg import SDFG, ScopeSubgraphView, SDFGState
 from dace.sdfg import nodes as nd
 from dace.sdfg.state import StateSubgraphView
-from dace.transformation.transformation import (PatternTransformation,
-                                                SingleStateTransformation,
-                                                MultiStateTransformation,
-                                                SubgraphTransformation)
 from dace.transformation.interstate.loop_detection import (DetectLoop,
                                                            find_for_loop)
 from dace.transformation.passes.pattern_matching import match_patterns
-from dace import symbolic
+from dace.transformation.transformation import (MultiStateTransformation,
+                                                PatternTransformation,
+                                                SingleStateTransformation,
+                                                SubgraphTransformation)
 
 
 @total_ordering

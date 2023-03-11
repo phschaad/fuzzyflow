@@ -235,7 +235,7 @@ def main():
             if args.skip_n:
                 if i <= args.skip_n:
                     print('Skipping')
-                    i += i
+                    i += 1
                     continue
             instance_out_path = None
             if output_dir:
@@ -243,12 +243,12 @@ def main():
                     output_dir, xf_name + '_' + str(i)
                 )
             verifier = TransformationVerifier(
-                match, sdfg, args.cutout_strategy, args.sampling_strategy,
-                instance_out_path
+                match, sdfg, args.sampling_strategy, instance_out_path
             )
             try:
                 valid = verifier.verify(
-                    args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
+                    args.runs, status=StatusLevel.DEBUG,
+                    enforce_finiteness=True,
                     symbol_constraints=symbol_constraints,
                     data_constraints=data_constraints
                 )

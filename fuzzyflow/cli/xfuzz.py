@@ -9,7 +9,6 @@ import warnings
 
 from dace.sdfg import SDFG
 
-from fuzzyflow import cutout
 from fuzzyflow.util import StatusLevel, load_transformation_from_file
 from fuzzyflow.verification.sampling import SamplingStrategy
 from fuzzyflow.verification.verifier import TransformationVerifier
@@ -43,14 +42,6 @@ def main():
         default=200
     )
 
-    parser.add_argument(
-        '-c',
-        '--cutout-strategy',
-        type=cutout.CutoutStrategy,
-        choices=list(cutout.CutoutStrategy),
-        help='Strategy to use for selecting subgraph cutouts',
-        default=cutout.CutoutStrategy.SIMPLE
-    )
     parser.add_argument(
         '-s',
         '--sampling-strategy',
@@ -108,9 +99,7 @@ def main():
         'ignore', message='.*already loaded, renaming file.*'
     )
 
-    verifier = TransformationVerifier(
-        xform, sdfg, args.cutout_strategy, args.sampling_strategy
-    )
+    verifier = TransformationVerifier(xform, sdfg, args.sampling_strategy)
 
     valid = verifier.verify(
         args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
