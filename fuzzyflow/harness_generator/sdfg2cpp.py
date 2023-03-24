@@ -1,7 +1,6 @@
 import numpy as np
 import dace
 
-# my code starts here (need to factor out later)
 import struct
 
 def get_arg_type(arg, argname):
@@ -48,18 +47,18 @@ def write_arg(arg, data_file):
                 data_file.write((x.item()).to_bytes(elemsize, byteorder='little', signed=True))
         elif (arg.dtype == np.float32):
             for x in np.nditer(arg.T):
-                ba = bytearray(struct.pack("f", x.item()))  
+                ba = bytearray(struct.pack("f", x.item()))
                 data_file.write(ba)
         elif (arg.dtype == np.double):
             for x in np.nditer(arg.T):
-                ba = bytearray(struct.pack("d", x.item()))  
+                ba = bytearray(struct.pack("d", x.item()))
                 data_file.write(ba)
         else:
             raise(ValueError("Unsupported np type "+str(arg.dtype)))
     else:
         raise ValueError("Unsupported type: "+str(type(arg)))
 
- 
+
 def read_arg(arg, argname, code_file):
     (allocate, elems, elemsize, elemtypec) = get_arg_type(arg, argname)
     # now read the data, lets keep this c compatible
@@ -81,12 +80,14 @@ def alloc_arg(arg, argname, code_file):
         print("  "+elemtypec+" "+argname+";", file=code_file)
         return [ (argname, elems, elemsize, elemtypec, False) ]
 
+
 def write_back_arg(outfile_name, arg, argname, code_file):
     (allocate, elems, elemsize, elemtypec) = get_arg_type(arg, argname)
     if allocate:
         print("  dacefuzz_write_"+elemtypec+"("+outfile_name+", "+argname+", "+str(elems)+");", file=code_file)
     else:
         print("  dacefuzz_write_"+elemtypec+"("+outfile_name+", &"+argname+", "+str(elems)+");", file=code_file)
+
 
 def compare_arg(arg, argname, code_file):
     (allocate, elems, elemsize, elemtypec) = get_arg_type(arg, argname)
@@ -101,9 +102,6 @@ def compare_arg(arg, argname, code_file):
     print("      " + "printf(\"%lf vs %lf\\n\", ((double)dacefuzz_tmp1), ((double)dacefuzz_tmp2));", file=code_file)
     print("    }", file=code_file)
     print("  }", file=code_file)
-
-
-
 
 
 def print_helpers(code_file):
@@ -139,7 +137,7 @@ def generate_headers(code_file, sdfg1, sdfg2):
     print("", file=code_file)
 
 def generate_write_back(code_file, datafile, sdfg, args, kwargs):
-    for arg in args: 
+    for arg in args:
         write_back_arg(datafile, arg, None, code_file)
     for arg in kwargs:
         write_back_arg(datafile, kwargs[arg], arg, code_file)
@@ -149,7 +147,7 @@ def generate_reads(code_file, sdfg, args, kwargs):
     print("  /* read the input data of "+sdfg.name+" */", file=code_file)
     print("  argdata = fopen(argv[1], \"rb\");", file=code_file);
     print("  if (argdata == NULL) {printf(\"Could not open data file %s!\\n\", argv[1]); exit(EXIT_FAILURE);}\n", file=code_file)
-    for arg in args: 
+    for arg in args:
         read_arg(arg, None, code_file)
     for arg in kwargs:
         read_arg(kwargs[arg], arg, code_file)
@@ -159,12 +157,13 @@ def generate_reads(code_file, sdfg, args, kwargs):
 def generate_allocs(code_file, sdfg, args, kwargs):
     print("  /* allocate in/out data */", file=code_file)
     allocated_syms = []
-    for arg in args: 
+    for arg in args:
         allocated_syms += alloc_arg(arg, None, code_file)
     for arg in kwargs:
         allocated_syms += alloc_arg(kwargs[arg], arg, code_file)
     print("", file=code_file)
     return allocated_syms
+
 
 def generate_validators(code_file, allocs, sdfg, args, kwargs):
     print("  /* validate if the input data matches the sdfg argument \"specification\" */", file=code_file)
@@ -184,16 +183,17 @@ def generate_validators(code_file, allocs, sdfg, args, kwargs):
         else:
             raise ValueError("Unsupported data type found while generating validators")
 
+
 def compare_outputs(code_file, sdfg, args, kwargs):
     print("  /* compare the outputs of both sdfgs */", file=code_file)
     print("  FILE* out1 = fopen(argv[2], \"rb\");", file=code_file)
     print("  FILE* out2 = fopen(argv[3], \"rb\");", file=code_file)
-    for arg in args:  
+    for arg in args:
         compare_arg(arg, None, code_file)
     for arg in kwargs:
         compare_arg(kwargs[arg], arg, code_file)
-    print("  fclose(out1);", file=code_file);
-    print("  fclose(out2);", file=code_file);
+    print("  fclose(out1);", file=code_file)
+    print("  fclose(out2);", file=code_file)
     print("", file=code_file)
 
 
@@ -219,7 +219,7 @@ def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
         print("  /* call "+ sdfg1.name + " */", file=code_file)
         generate_call(code_file, sdfg1, args, kwargs) # generate the call
         print("", file=code_file)
-        print("  FILE* outdata1 = fopen(argv[2], \"wb\");", file=code_file);
+        print("  FILE* outdata1 = fopen(argv[2], \"wb\");", file=code_file)
         generate_write_back(code_file, "outdata1", sdfg1, args, kwargs) # write back the data in c++
         print("  fclose(outdata1);\n", file=code_file)
         if sdfg2 is not None:
@@ -230,11 +230,11 @@ def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
             generate_call(code_file, sdfg2, args, kwargs) # generate the call
             print("", file=code_file)
             print("  /* write all data of "+sdfg2.name+" back into an output file */", file=code_file)
-            print("  FILE* outdata2 = fopen(argv[3], \"wb\");", file=code_file);
+            print("  FILE* outdata2 = fopen(argv[3], \"wb\");", file=code_file)
             generate_write_back(code_file, "outdata2", sdfg2, args, kwargs) # write back the data in c++
             print("  fclose(outdata2);\n", file=code_file)
             compare_outputs(code_file, sdfg2, args, kwargs) # compare the outputs if we have two sdfgs
-        
+
         print("  /* free input data buffers */", file=code_file)
         for s in allocs:
             (argname, elems, elemsize, typec, allocate) = s
@@ -244,7 +244,7 @@ def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
 
     with open(out_file + ".dat", "wb") as data_file:
         # serialize arguments as binaries
-        for arg in args:  
+        for arg in args:
             write_arg(arg, data_file)
         for arg in kwargs:
             write_arg(kwargs[arg], data_file)
@@ -269,7 +269,7 @@ def read_back_arg(arg, argname, data_file):
                 elemsize = 4
                 data = data_file.read(elemsize)
                 value = struct.unpack('f', data)[0]
-                arg.flat[i] = value 
+                arg.flat[i] = value
             elif (arg.dtype == np.double):
                 elemsize = 8
                 data = data_file.read(elemsize)
@@ -281,12 +281,9 @@ def read_back_arg(arg, argname, data_file):
         raise ValueError("Unsupported type: "+str(type(arg)))
 
 
-
-
 def read_args(datafile, *args, **kwargs): #this reads the datafile the harness produces
     with open(datafile, "rb") as data_file:
-        for arg in args: 
+        for arg in args:
             read_back_arg(arg, None, data_file)
         for arg in kwargs:
             read_back_arg(kwargs[arg], arg, data_file)
-
