@@ -6,11 +6,14 @@ import json
 from enum import Enum
 from functools import total_ordering
 from typing import Dict, List, Set, Tuple, Union
+import sympy as sp
 
 from dace import serialize
-from dace.sdfg import SDFG, ScopeSubgraphView, SDFGState
+from dace.sdfg import SDFG, ScopeSubgraphView, SDFGState, InterstateEdge
 from dace.sdfg import nodes as nd
 from dace.sdfg.state import StateSubgraphView
+from dace.memlet import Memlet
+from dace.subsets import Range
 from dace.transformation.interstate.loop_detection import (DetectLoop,
                                                            find_for_loop)
 from dace.transformation.passes.pattern_matching import match_patterns
@@ -139,6 +142,8 @@ def load_transformation_from_file(
             raise Exception(
                 'Transformations of type', type(xform), 'cannot be handled'
             )
+    if hasattr(xform, 'simplify'):
+        xform.simplify = False
     return xform, target_sdfg
 
 
@@ -184,6 +189,7 @@ def cutout_determine_symbol_constraints(
     if pre_constraints is not None:
         general_constraints = pre_constraints
 
+    # Construct symbol constraints from loops the cutout may be a part of.
     loop_matches: List[LoopDetection] = list(
         match_patterns(sdfg, LoopDetection)
     )
@@ -199,5 +205,52 @@ def cutout_determine_symbol_constraints(
     for s in ct.free_symbols:
         if s in general_constraints:
             cutout_constraints[s] = general_constraints[s]
+
+    # Construct symbol constraints from all data accesses in the cutout.
+    cutout_memlets: Set[Memlet] = set()
+    for state in ct.states():
+        for iedge in ct.in_edges(state):
+            ise_memlets = iedge.data.get_read_memlets(ct.arrays)
+            for memlet in ise_memlets:
+                cutout_memlets.add(memlet)
+        for oedge in ct.out_edges(state):
+            ise_memlets = oedge.data.get_read_memlets(ct.arrays)
+            for memlet in ise_memlets:
+                cutout_memlets.add(memlet)
+        for edge in state.edges():
+            cutout_memlets.add(edge.data)
+
+    memlet_constraints = dict()
+    for memlet in cutout_memlets:
+        if isinstance(memlet.subset, Range):
+            desc = ct.arrays[memlet.data]
+            for i, r in enumerate(memlet.subset.ranges):
+                if isinstance(r[0], sp.Basic) and len(r[0].free_symbols) > 0:
+                    lhs_free = r[0].free_symbols
+                    rhs_free = r[1].free_symbols
+                    if not any([s in lhs_free for s in rhs_free]):
+                        memlet_constraints[r[0]] = (0, r[1] - 1)
+                if isinstance(r[1], sp.Basic) and len(r[1].free_symbols) > 0:
+                    lhs_free = r[1].free_symbols
+                    rhs_free = desc.shape[i].free_symbols if isinstance(
+                        desc.shape[i], sp.Basic
+                    ) else {}
+                    if not any([s in lhs_free for s in rhs_free]):
+                        memlet_constraints[r[1]] = (0, desc.shape[i] - 1)
+                if isinstance(r[2], sp.Basic) and len(r[2].free_symbols) > 0:
+                    lhs_free = r[2].free_symbols
+                    rhs_free = r[1].free_symbols
+                    if not any([s in lhs_free for s in rhs_free]):
+                        memlet_constraints[r[2]] = (1, r[1] - 1)
+
+    for k, v in memlet_constraints.items():
+        if isinstance(k, sp.Basic):
+            for sym in k.free_symbols:
+                s = str(sym)
+                if s in ct.free_symbols and not s in cutout_constraints:
+                    cutout_constraints[s] = (v[0] + 1, v[1], 1)
+        else:
+            if k in ct.free_symbols and not k in cutout_constraints:
+                cutout_constraints[k] = (v[0] + 1, v[1], 1)
 
     return cutout_constraints

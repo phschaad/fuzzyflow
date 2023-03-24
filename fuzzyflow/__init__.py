@@ -2,7 +2,7 @@
 # This file is part of FuzzyFlow, which is released under the BSD 3-Clause
 # License. For details, see the LICENSE file.
 
-from .verification.verifier import TransformationVerifier
+from .verification.verifier import TransformationVerifier, StatusLevel
 from .cutout import CutoutStrategy
 from .verification.sampling import SamplingStrategy
 from .util import load_transformation_from_file

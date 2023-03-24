@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import warnings
+import shutil
 from typing import List
 
 from dace import serialize
@@ -262,6 +263,8 @@ def main():
                 failed.add(i)
                 print('Failed to validate with exception')
                 print(e)
+            for folder in os.listdir('.dacecache'):
+                shutil.rmtree(os.path.join('.dacecache', folder))
             i += 1
 
             file_contents['index'] = i

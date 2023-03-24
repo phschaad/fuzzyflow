@@ -210,20 +210,24 @@ class DataSampler:
             k, (low, high, step), count = deferred.popleft()
             retlow = None
             if isinstance(low, symbol):
-                if low in symbol_map:
-                    retlow = symbol_map[low]
+                if str(low) in symbol_map:
+                    retlow = symbol_map[str(low)]
             elif isinstance(low, Expr):
                 res = low.subs(symbol_map)
                 if isinstance(res, Number) and res.is_Integer:
                     retlow = int(res)
+            elif isinstance(low, int):
+                retlow = low
             rethigh = None
             if isinstance(high, symbol):
-                if high in symbol_map:
-                    rethigh = symbol_map[low]
+                if str(high) in symbol_map:
+                    rethigh = symbol_map[str(high)]
             elif isinstance(high, Expr):
                 res = high.subs(symbol_map)
                 if isinstance(res, Number) and res.is_Integer:
                     rethigh = int(res)
+            elif isinstance(high, int):
+                retlow = low
             if retlow is None or rethigh is None:
                 if count < cutoff:
                     deferred.append((k, (low, high, step), count + 1))

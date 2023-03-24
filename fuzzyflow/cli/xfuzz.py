@@ -43,6 +43,13 @@ def main():
     )
 
     parser.add_argument(
+        '-o',
+        '--output',
+        type=str,
+        help='<PATH TO OUTPUT FOLDER>',
+    )
+
+    parser.add_argument(
         '-s',
         '--sampling-strategy',
         type=SamplingStrategy,
@@ -75,6 +82,11 @@ def main():
         print('Transformation file', xform_path, 'not found')
         exit(1)
 
+    if args.output is not None:
+        if not os.path.exists(args.output):
+            os.makedirs(args.output, exist_ok=True)
+    output_dir = args.output if os.path.exists(args.output) else None
+
     # Load and validate SDFG. Invalid SDFGs should fail this process.
     sdfg = SDFG.from_file(sdfg_path)
     sdfg.validate()
@@ -99,7 +111,9 @@ def main():
         'ignore', message='.*already loaded, renaming file.*'
     )
 
-    verifier = TransformationVerifier(xform, sdfg, args.sampling_strategy)
+    verifier = TransformationVerifier(
+        xform, sdfg, args.sampling_strategy, output_dir=output_dir
+    )
 
     valid = verifier.verify(
         args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,

@@ -21,7 +21,6 @@ from dace.transformation.transformation import (PatternTransformation,
                                                 SubgraphTransformation)
 from dace.symbolic import pystr_to_symbolic
 from dace.sdfg.validation import InvalidSDFGError
-from dace.transformation.passes.analysis import StateReachability
 from dace.codegen.instrumentation.data.data_report import InstrumentedDataReport
 
 from fuzzyflow.runner import run_subprocess_precompiled
@@ -66,7 +65,9 @@ class TransformationVerifier:
         if self._cutout is None:
             if status >= StatusLevel.DEBUG:
                 print('Finding ideal cutout')
-            self._cutout = SDFGCutout.from_transformation(self.sdfg, self.xform)
+            self._cutout = SDFGCutout.from_transformation(
+                self.sdfg, self.xform, use_alibi_nodes=False
+            )
             if status >= StatusLevel.DEBUG:
                 print('Cutout obtained')
         return self._cutout
@@ -118,7 +119,8 @@ class TransformationVerifier:
     def _do_verify(
         self, n_samples: int = 1, status: StatusLevel = StatusLevel.OFF,
         debug_save_path: str = None, enforce_finiteness: bool = False,
-        symbol_constraints: Dict = None, data_constraints: Dict = None
+        symbol_constraints: Dict = None, data_constraints: Dict = None,
+        strict_config: bool = False
     ) -> bool:
         cutout = self.cutout(status=status)
         orig_cutout = deepcopy(cutout)
@@ -224,7 +226,7 @@ class TransformationVerifier:
                     bar.write('Sampling symbols')
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                     orig_cutout, constraints_map=cutout_symbol_constraints,
-                    maxval=256
+                    maxval=128
                 )
 
                 constraints_map = None
@@ -239,7 +241,7 @@ class TransformationVerifier:
                 orig_in_config: Set[str] = set()
                 new_in_config: Set[str] = set()
                 output_config: Set[str] = set()
-                if isinstance(orig_cutout, SDFGCutout):
+                if strict_config and isinstance(orig_cutout, SDFGCutout):
                     orig_in_config = orig_cutout.input_config
                     output_config = orig_cutout.output_config
                 else:
@@ -265,7 +267,7 @@ class TransformationVerifier:
                     )
                 inputs_xformed = dict()
                 for k, v in inputs.items():
-                    if k in new_in_config:
+                    if not strict_config or k in new_in_config:
                         inputs_xformed[k] = deepcopy(v)
 
                 if status >= StatusLevel.VERBOSE:
@@ -392,11 +394,18 @@ class TransformationVerifier:
                                     )
                                     return False
                         except KeyError:
-                            print(
-                                'WARNING: Missing instrumentation on system ' +
-                                'state for container',
-                                dat
-                            )
+                            if strict_config:
+                                print(
+                                    'WARNING: Missing instrumentation on ' +
+                                    'system state for container',
+                                    dat
+                                )
+                            elif status >= StatusLevel.VERBOSE:
+                                bar.write(
+                                    'No instrumentation on system state ' +
+                                    'for container',
+                                    dat
+                                )
 
                     if not resample or resample_attempt > 11:
                         if resample_attempt > 11:
@@ -449,7 +458,8 @@ class TransformationVerifier:
     def verify(
         self, n_samples: int = 1, status: StatusLevel = StatusLevel.OFF,
         debug_save_path: str = None, enforce_finiteness: bool = False,
-        symbol_constraints: Dict = None, data_constraints: Dict = None
+        symbol_constraints: Dict = None, data_constraints: Dict = None,
+        strict_config: bool = False
     ) -> bool:
         with config.temporary_config():
             config.Config.set(
@@ -465,5 +475,5 @@ class TransformationVerifier:
             config.Config.set('cache', value='name')
             return self._do_verify(
                 n_samples, status, debug_save_path, enforce_finiteness,
-                symbol_constraints, data_constraints
+                symbol_constraints, data_constraints, strict_config
             )

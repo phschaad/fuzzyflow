@@ -2,9 +2,7 @@ import os
 from typing import Dict, List
 from alive_progress import alive_bar
 
-import dace
 from dace.sdfg import SDFG
-from dace.transformation import dataflow, interstate, subgraph
 
 import fuzzyflow as ff
 
@@ -54,7 +52,7 @@ def _test_from_basedir(datadir: str, category_name: str):
                         )
 
                         verifier = ff.TransformationVerifier(
-                            xform, sdfg, ff.CutoutStrategy.SIMPLE
+                            xform, sdfg, ff.SamplingStrategy.SIMPLE_UNIFORM
                         )
                         valid = valid and verifier.verify(
                             n_samples=100,
