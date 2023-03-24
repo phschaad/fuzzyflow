@@ -250,3 +250,43 @@ def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
             write_arg(kwargs[arg], data_file)
 
 
+def read_back_arg(arg, argname, data_file):
+    elems = 1
+    elemsize = 0
+    if isinstance(arg, int):
+        elemsize = 4
+        data_file.read(elemsize)
+        # we can't write back an integer (passed by value)
+    elif type(arg) == np.ndarray:
+        elems = arg.size
+        for i in range(0, elems):
+            if (arg.dtype == np.int32):
+                elemsize = 4
+                data = data_file.read(elemsize)
+                value = struct.unpack('i', data)[0]
+                arg.flat[i] = value
+            elif (arg.dtype == np.float32):
+                elemsize = 4
+                data = data_file.read(elemsize)
+                value = struct.unpack('f', data)[0]
+                arg.flat[i] = value 
+            elif (arg.dtype == np.double):
+                elemsize = 8
+                data = data_file.read(elemsize)
+                value = struct.unpack('d', data)[0]
+                arg.flat[i] = value
+            else:
+                raise(ValueError("Unsupported np type "+str(arg.dtype)))
+    else:
+        raise ValueError("Unsupported type: "+str(type(arg)))
+
+
+
+
+def read_args(datafile, *args, **kwargs): #this reads the datafile the harness produces
+    with open(datafile, "rb") as data_file:
+        for arg in args: 
+            read_back_arg(arg, None, data_file)
+        for arg in kwargs:
+            read_back_arg(kwargs[arg], arg, data_file)
+
