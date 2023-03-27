@@ -97,7 +97,7 @@ def compare_arg(arg, argname, code_file):
     print("    " + "dacefuzz_read_"+str(elemtypec)+"(&dacefuzz_tmp2, out2, 1);", file=code_file)
     print("    " + "double dacefuzz_diff = (((double)dacefuzz_tmp1) - ((double)dacefuzz_tmp2));", file=code_file)
     print("    " + "if (fabs(dacefuzz_diff) > 0.0) {", file=code_file)
-    print("      " + "printf(\"The outputs differ for argument "+str(argname)+" at position %i of %i\\n\", dacefuzz_idx_i, "+str(elems)+"); //exit(EXIT_FAILURE);", file=code_file)
+    print("      " + "printf(\"The outputs differ for argument "+str(argname)+" at position %i of %i\\n\", dacefuzz_idx_i, "+str(elems)+"); exit(EXIT_FAILURE);", file=code_file)
     print("      " + "printf(\"%lf vs %lf\\n\", ((double)dacefuzz_tmp1), ((double)dacefuzz_tmp2));", file=code_file)
     print("    }", file=code_file)
     print("  }", file=code_file)
@@ -176,7 +176,9 @@ def generate_validators(code_file, allocs, sdfg, args, kwargs):
                 (name, size, elemsize, typec, allocated) = alloc
                 if str(name) == str(arg):
                     print("  if ("+str(size)+"*"+str(elemsize) + " != (" + str(dt.total_size) + ")*"+str(elemsize)+") { //check if "+str(arg)+" has correct size (lhs=allocated size, rhs=symbolic size)", file=code_file)
-                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+str(dt.total_size)+")\\n\"); return 0;", file=code_file)
+                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+str(dt.total_size)+") - resizing\\n\");", file=code_file)
+                    print("    "+str(name)+ " = ("+str(typec)+"*) realloc("+str(name)+", (" + str(dt.total_size) + ")*"+str(elemsize)+");", file=code_file)
+                    print("    assert("+str(name)+" != NULL);", file=code_file)
                     # here we could also reallocate to be able to continue - but then the data in the new region is undefined
                     print("  }", file=code_file)
         elif isinstance(dt, dace.data.Scalar):
@@ -214,7 +216,7 @@ def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
             print("  if (argc < 4) {\n    printf(\"Call this verifier with a data in and two datafile arguments, i.e: %s data_in data_out_1 data_out_2\\n\", argv[0]); exit(EXIT_FAILURE);\n  }\n", file=code_file)
         allocs = generate_allocs(code_file, sdfg1, args, kwargs) # allocate mem
         generate_reads(code_file, sdfg1, args, kwargs) # read the inputs
-        generate_validators(code_file, allocs, sdfg1, args, kwargs)
+        sizes = generate_validators(code_file, allocs, sdfg1, args, kwargs)
         print("", file=code_file)
         print("  /* call "+ sdfg1.name + " */", file=code_file)
         generate_call(code_file, sdfg1, args, kwargs) # generate the call
@@ -224,7 +226,7 @@ def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
         print("  fclose(outdata1);\n", file=code_file)
         if sdfg2 is not None:
             generate_reads(code_file, sdfg2, args, kwargs) # read the inputs
-            generate_validators(code_file, allocs, sdfg2, args, kwargs)
+            sizes = generate_validators(code_file, allocs, sdfg2, args, kwargs)
             print("", file=code_file)
             print("  /* call "+ sdfg2.name + " */", file=code_file)
             generate_call(code_file, sdfg2, args, kwargs) # generate the call
