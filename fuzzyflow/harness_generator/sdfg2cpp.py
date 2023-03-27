@@ -69,6 +69,10 @@ def read_arg(arg, argname, code_file):
     else:
         makeptr="&"
     print("  " + "dacefuzz_read_"+str(elemtypec)+"( "+str(makeptr)+str(argname)+", argdata, "+str(elems) +");", file=code_file)
+    if not allocate:
+        if elemtypec == "int":
+            print("  printf(\"%s = %i\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
+            print("  if ("+str(arg)+" * 10 < "+str(argname)+") {printf(\"Symbol value increased by more then 10x, this will likely overflow, bail out.\\n\"); exit(EXIT_FAILURE);}", file=code_file)
 
 
 def alloc_arg(arg, argname, code_file):
@@ -96,8 +100,10 @@ def compare_arg(arg, argname, code_file):
     print("    " + "dacefuzz_read_"+str(elemtypec)+"(&dacefuzz_tmp1, out1, 1);", file=code_file)
     print("    " + "dacefuzz_read_"+str(elemtypec)+"(&dacefuzz_tmp2, out2, 1);", file=code_file)
     print("    " + "double dacefuzz_diff = (((double)dacefuzz_tmp1) - ((double)dacefuzz_tmp2));", file=code_file)
-    print("    " + "if (fabs(dacefuzz_diff) > 0.0) {", file=code_file)
-    print("      " + "printf(\"The outputs differ for argument "+str(argname)+" at position %i of %i\\n\", dacefuzz_idx_i, "+str(elems)+"); exit(EXIT_FAILURE);", file=code_file)
+    print("    " + "if (fabs(dacefuzz_diff) > 0.0001) {", file=code_file)
+    print("      " + "printf(\"The outputs differ for argument "+str(argname)+" at position %i of %i\\n\", dacefuzz_idx_i, "+str(elems)+");", file=code_file)
+    print("      " + "*((int*) 0) = 0; //make afl happy", file=code_file)
+    print("      " + "exit(EXIT_FAILURE);", file=code_file)
     print("      " + "printf(\"%lf vs %lf\\n\", ((double)dacefuzz_tmp1), ((double)dacefuzz_tmp2));", file=code_file)
     print("    }", file=code_file)
     print("  }", file=code_file)
@@ -175,8 +181,11 @@ def generate_validators(code_file, allocs, sdfg, args, kwargs):
             for alloc in allocs:
                 (name, size, elemsize, typec, allocated) = alloc
                 if str(name) == str(arg):
-                    print("  if ("+str(size)+"*"+str(elemsize) + " != (" + str(dt.total_size) + ")*"+str(elemsize)+") { //check if "+str(arg)+" has correct size (lhs=allocated size, rhs=symbolic size)", file=code_file)
-                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+str(dt.total_size)+") - resizing\\n\");", file=code_file)
+                    print("  if ("+str(size)+"*"+str(elemsize) + " < (" + str(dt.total_size) + ")*"+str(elemsize)+") { //check if "+str(arg)+" has correct size (lhs=allocated size, rhs=symbolic size)", file=code_file)
+                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+str(dt.total_size)+"=%i MB) - resizing\\n\", ("+str(dt.total_size)+"*"+str(elemsize)+")/1000000);", file=code_file)
+                    print("    if ("+str(dt.total_size)+" == 0) {printf(\"Current symbols lead to a null allocation - bail out.\\n\"); return 0;}", file=code_file)
+                    print("    if ("+str(dt.total_size)+" < 0) {printf(\"Current symbols lead to negative allocation - bail out.\\n\"); return 0;}", file=code_file)
+                    print("    if ("+str(dt.total_size)+" > 100000000) {printf(\"Current symbols lead to a huge allocation - bail out.\\n\"); return 0;}", file=code_file)
                     print("    "+str(name)+ " = ("+str(typec)+"*) realloc("+str(name)+", (" + str(dt.total_size) + ")*"+str(elemsize)+");", file=code_file)
                     print("    assert("+str(name)+" != NULL);", file=code_file)
                     # here we could also reallocate to be able to continue - but then the data in the new region is undefined
