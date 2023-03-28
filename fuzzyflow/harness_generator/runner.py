@@ -7,9 +7,9 @@ sdfg_pre = dace.SDFG.from_file('pre.sdfg')
 sdfg_post = dace.SDFG.from_file('post.sdfg')
 
 # Inputs / Outputs
-I = 4
-J = 4
-K = 4
+I = 32
+J = 32
+K = 32
 flx_field = np.random.rand(I + 1, J, K)
 fly_field = np.random.rand(I, J + 1, K)
 coeff = np.random.rand(I, J, K)
@@ -24,7 +24,7 @@ sdfg_post(flx_field=flx_field, fly_field=fly_field, coeff=coeff, in_field=in_fie
           out_field=out_field_post, I=I, J=J, K=K)
 
 if np.allclose(out_field_pre, out_field_post):
-    print('pass')
+    print('python pass')
 else:
     print('Pre and Post SDFGs give different results in Python')
 
@@ -38,7 +38,18 @@ out_field = np.zeros((I, J, K))
 #    (we assume the two SDFGs have the same signature and two different names)
 #  - if only one SDFG is given, it is simply called, and the outputs are written back
 
-dump_args("c++", "fuzzer", sdfg_pre, sdfg_post, #target lang, filename, sdfg1, sdfg2
+# in order to keep the input sizes small (make fuzzing more efficient and work around AFLs stupid 1MB input file limit)
+# you can set initializers (currently we support rand and zeroes) for different arguments
+# they will not be dumped to the input file but will be present in the output
+# they will have the same values for both calls
+init_args = {
+             "flx_field":"rand",
+             "fly_field":"rand", 
+             "coeff":"rand", 
+             "in_field":"rand", 
+             "out_field":"zeros",
+            }
+dump_args("c++", "fuzzer", init_args, sdfg_pre, sdfg_post, #target lang, filename, autoinit_args, sdfg1, sdfg2
          flx_field=flx_field, fly_field=fly_field, coeff=coeff, in_field=in_field,
          out_field=out_field, I=I, J=J, K=K)
 
@@ -58,6 +69,7 @@ os.system("./fuzzer fuzzer.dat out1.dat out2.dat")
 
 # Now we read back the data so we can examine in Python 
 # You don't need this the C++ tester already compares, this is more for debugging
+# Note: if you use auto initializers for inputs it is expected that Python and C++ don't match
 
 out_field_pre_c = np.zeros((I, J, K)) #values are not important we just need the memory/size
 read_args("out1.dat", 

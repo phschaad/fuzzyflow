@@ -74,6 +74,19 @@ def read_arg(arg, argname, code_file):
             print("  printf(\"%s = %i\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
             print("  if ("+str(arg)+" * 10 < "+str(argname)+") {printf(\"Symbol value increased by more then 10x, this will likely overflow, bail out.\\n\"); exit(EXIT_FAILURE);}", file=code_file)
 
+def autogen_arg(arg, argname, initializer, code_file):
+    (allocate, elems, elemsize, elemtypec) = get_arg_type(arg, argname)
+    makeptr=""
+    if allocate:
+        makeptr="" #this is already a pointer
+    else:
+        makeptr="&"
+    print("  " + "dacefuzz_init_"+str(initializer)+"_"+str(elemtypec)+"( "+str(makeptr)+str(argname)+", "+str(elems) +");", file=code_file)
+    if not allocate:
+        if elemtypec == "int":
+            print("  printf(\"%s = %i\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
+            print("  if ("+str(arg)+" * 10 < "+str(argname)+") {printf(\"Symbol value increased by more then 10x, this will likely overflow, bail out.\\n\"); exit(EXIT_FAILURE);}", file=code_file)
+
 
 def alloc_arg(arg, argname, code_file):
     (allocate, elems, elemsize, elemtypec) = get_arg_type(arg, argname)
@@ -122,6 +135,13 @@ def print_helpers(code_file):
     print("int dacefuzz_write_int(FILE* datastream, void* src, size_t elems) { return fwrite(src, 4, elems, datastream); }", file=code_file)
     print("int dacefuzz_write_double(FILE* datastream, void* src, size_t elems) { return fwrite(src, 8, elems, datastream); }", file=code_file)
     print("int dacefuzz_write_float(FILE* datastream, void* src, size_t elems) { return fwrite(src, 4, elems, datastream); }\n", file=code_file)
+    print("int dacefuzz_init_zeros_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }\n", file=code_file)
+    print("int dacefuzz_init_zeros_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }\n", file=code_file)
+    print("int dacefuzz_init_zeros_double(double* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }\n", file=code_file)
+    print("int dacefuzz_init_rand_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=rand(); } return elems; }\n", file=code_file)
+    print("int dacefuzz_init_rand_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= ((float)rand() / (float) RAND_MAX)*42.0; } return elems; }\n", file=code_file)
+    print("int dacefuzz_init_rand_double(double* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= ((double)rand() / (double) RAND_MAX)*42.0; } return elems; }\n", file=code_file)
+
 
 
 def generate_call(out_file, sdfg, args, kwargs):
@@ -151,14 +171,18 @@ def generate_write_back(code_file, datafile, sdfg, args, kwargs):
         write_back_arg(datafile, kwargs[arg], arg, code_file)
 
 
-def generate_reads(code_file, sdfg, args, kwargs):
+def generate_reads(code_file, autoinit_args, sdfg, args, kwargs):
     print("  /* read the input data of "+sdfg.name+" */", file=code_file)
     print("  argdata = fopen(argv[1], \"rb\");", file=code_file);
     print("  if (argdata == NULL) {printf(\"Could not open data file %s!\\n\", argv[1]); exit(EXIT_FAILURE);}\n", file=code_file)
+    print("  srand(23);", file=code_file)
     for arg in args: 
         read_arg(arg, None, code_file)
     for arg in kwargs:
-        read_arg(kwargs[arg], arg, code_file)
+        if str(arg) in autoinit_args.keys():
+            autogen_arg(kwargs[arg], arg, autoinit_args[str(arg)], code_file)
+        else:
+            read_arg(kwargs[arg], arg, code_file)
     print("  fclose(argdata);", file=code_file)
 
 
@@ -208,7 +232,7 @@ def compare_outputs(code_file, sdfg, args, kwargs):
     print("", file=code_file)
 
 
-def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
+def dump_args(out_lang, out_file, autoinit_args, sdfg1, sdfg2, *args, **kwargs):
     if out_lang == "c++":
         code_ext = ".cpp"
     if out_lang != "c++":
@@ -224,7 +248,7 @@ def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
         else:
             print("  if (argc < 4) {\n    printf(\"Call this verifier with a data in and two datafile arguments, i.e: %s data_in data_out_1 data_out_2\\n\", argv[0]); exit(EXIT_FAILURE);\n  }\n", file=code_file)
         allocs = generate_allocs(code_file, sdfg1, args, kwargs) # allocate mem
-        generate_reads(code_file, sdfg1, args, kwargs) # read the inputs
+        generate_reads(code_file, autoinit_args, sdfg1, args, kwargs) # read the inputs
         sizes = generate_validators(code_file, allocs, sdfg1, args, kwargs)
         print("", file=code_file)
         print("  /* call "+ sdfg1.name + " */", file=code_file)
@@ -234,7 +258,7 @@ def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
         generate_write_back(code_file, "outdata1", sdfg1, args, kwargs) # write back the data in c++
         print("  fclose(outdata1);\n", file=code_file)
         if sdfg2 is not None:
-            generate_reads(code_file, sdfg2, args, kwargs) # read the inputs
+            generate_reads(code_file, autoinit_args, sdfg2, args, kwargs) # read the inputs
             sizes = generate_validators(code_file, allocs, sdfg2, args, kwargs)
             print("", file=code_file)
             print("  /* call "+ sdfg2.name + " */", file=code_file)
@@ -255,10 +279,13 @@ def dump_args(out_lang, out_file, sdfg1, sdfg2, *args, **kwargs):
 
     with open(out_file + ".dat", "wb") as data_file:
         # serialize arguments as binaries
-        for arg in args:  
+        for arg in args:
             write_arg(arg, data_file)
         for arg in kwargs:
-            write_arg(kwargs[arg], data_file)
+            if str(arg) in autoinit_args.keys():
+                print(str(arg) + " is an autoinit arg, it will NOT be present in the generated input file!")
+            else:
+                write_arg(kwargs[arg], data_file)
 
 
 def read_back_arg(arg, argname, data_file):
