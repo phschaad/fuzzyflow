@@ -14,6 +14,9 @@ def get_arg_type(arg, argname):
     if isinstance(arg, int):
         elemtypec = "int"
         elemsize = 4
+    elif isinstance(arg, float):
+        elemtypec = "double"
+        elemsize = 8
     elif type(arg) == np.ndarray:
         allocate = True
         elems = arg.size
@@ -39,6 +42,9 @@ def write_arg(arg, data_file):
     if isinstance(arg, int):
         elemsize = 4
         data_file.write((arg).to_bytes(elemsize, byteorder='little', signed=True))
+    elif isinstance(arg, float):
+        ba = bytearray(struct.pack("d", arg))
+        data_file.write(ba)
     elif type(arg) == np.ndarray:
         allocate = True
         elems = arg.size
@@ -73,6 +79,8 @@ def read_arg(arg, argname, code_file):
         if elemtypec == "int":
             print("  printf(\"%s = %i\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
             print("  if ("+str(arg)+" * 10 < "+str(argname)+") {printf(\"Symbol value increased by more then 10x, this will likely overflow, bail out.\\n\"); exit(EXIT_FAILURE);}", file=code_file)
+        elif elemtypec == "double":
+            print("  printf(\"%s = %lf\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
 
 def autogen_arg(arg, argname, initializer, code_file):
     (allocate, elems, elemsize, elemtypec) = get_arg_type(arg, argname)
@@ -133,12 +141,12 @@ def print_helpers(code_file):
     print("int dacefuzz_write_void(FILE* datastream, void* src, size_t elems) { printf(\"Something went wrong during codegen, we could not infer the type of some argument!\"); exit(EXIT_FAILURE); return 0;}", file=code_file)
     print("int dacefuzz_write_int(FILE* datastream, void* src, size_t elems) { return fwrite(src, 4, elems, datastream); }", file=code_file)
     print("int dacefuzz_write_double(FILE* datastream, void* src, size_t elems) { return fwrite(src, 8, elems, datastream); }", file=code_file)
-    print("int dacefuzz_write_float(FILE* datastream, void* src, size_t elems) { return fwrite(src, 4, elems, datastream); }\n", file=code_file)
-    print("int dacefuzz_init_zeros_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }\n", file=code_file)
-    print("int dacefuzz_init_zeros_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }\n", file=code_file)
-    print("int dacefuzz_init_zeros_double(double* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }\n", file=code_file)
-    print("int dacefuzz_init_rand_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=rand(); } return elems; }\n", file=code_file)
-    print("int dacefuzz_init_rand_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= ((float)rand() / (float) RAND_MAX)*42.0; } return elems; }\n", file=code_file)
+    print("int dacefuzz_write_float(FILE* datastream, void* src, size_t elems) { return fwrite(src, 4, elems, datastream); }", file=code_file)
+    print("int dacefuzz_init_zeros_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }", file=code_file)
+    print("int dacefuzz_init_zeros_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }", file=code_file)
+    print("int dacefuzz_init_zeros_double(double* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }", file=code_file)
+    print("int dacefuzz_init_rand_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=rand(); } return elems; }", file=code_file)
+    print("int dacefuzz_init_rand_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= ((float)rand() / (float) RAND_MAX)*42.0; } return elems; }", file=code_file)
     print("int dacefuzz_init_rand_double(double* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= ((double)rand() / (double) RAND_MAX)*42.0; } return elems; }\n", file=code_file)
 
 
@@ -217,10 +225,10 @@ def generate_validators(code_file, allocs, sym_constraints, sdfg, args, kwargs):
         elif isinstance(dt, dace.data.Scalar):
             if arg in sym_constraints:
                 print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
-                print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
+                print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
         elif arg in sym_constraints:
             print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
-            print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
+            print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
         else:
             raise ValueError("Unsupported data type found while generating validators")
 
@@ -301,6 +309,10 @@ def read_back_arg(arg, argname, data_file):
         elemsize = 4
         data_file.read(elemsize)
         # we can't write back an integer (passed by value)
+    elif isinstance(arg, float):
+        elemsize = 8
+        data_file.read(elemsize)
+        # we can't write back an float (passed by value, stored as double)
     elif type(arg) == np.ndarray:
         elems = arg.size
         for i in range(0, elems):
