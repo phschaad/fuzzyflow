@@ -1,0 +1,1811 @@
+{
+  "type": "SDFG",
+  "attributes": {
+    "arg_names": [
+      "A"
+    ],
+    "constants_prop": {},
+    "_arrays": {
+      "A": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "N",
+            "1"
+          ],
+          "total_size": "N**2",
+          "offset": [
+            "0",
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "pool": false,
+          "dtype": "float64",
+          "shape": [
+            "N",
+            "N"
+          ],
+          "transient": false,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      },
+      "__tmp0": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "N",
+            "1"
+          ],
+          "total_size": "N**2",
+          "offset": [
+            "0",
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "pool": false,
+          "dtype": "float64",
+          "shape": [
+            "N",
+            "N"
+          ],
+          "transient": true,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      },
+      "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "N",
+            "1"
+          ],
+          "total_size": "N**2",
+          "offset": [
+            "0",
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "pool": false,
+          "dtype": "float64",
+          "shape": [
+            "N",
+            "N"
+          ],
+          "transient": true,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      }
+    },
+    "symbols": {
+      "N": "int64"
+    },
+    "instrument": "No_Instrumentation",
+    "global_code": {
+      "frame": {
+        "string_data": "",
+        "language": "CPP"
+      }
+    },
+    "init_code": {
+      "frame": {
+        "string_data": "",
+        "language": "CPP"
+      }
+    },
+    "exit_code": {
+      "frame": {
+        "string_data": "",
+        "language": "CPP"
+      }
+    },
+    "orig_sdfg": null,
+    "transformation_hist": [],
+    "logical_groups": [],
+    "openmp_sections": true,
+    "debuginfo": {
+      "type": "DebugInfo",
+      "start_line": 17,
+      "end_line": 19,
+      "start_column": 0,
+      "end_column": 0,
+      "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+    },
+    "_pgrids": {},
+    "_subarrays": {},
+    "_rdistrarrays": {},
+    "callback_mapping": {},
+    "name": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_kernel",
+    "hash": "dba5ecd364402300e668dfb3431e244120569701dbaa38653601e3a6834d8ae8"
+  },
+  "nodes": [
+    {
+      "type": "SDFGState",
+      "label": "call_19",
+      "id": 0,
+      "collapsed": false,
+      "scope_dict": {
+        "-1": [
+          0,
+          1,
+          2,
+          3,
+          6
+        ],
+        "3": [
+          4,
+          5
+        ]
+      },
+      "nodes": [
+        {
+          "type": "AccessNode",
+          "label": "A",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 19,
+              "end_line": 19,
+              "start_column": 30,
+              "end_column": 30,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "data": "A",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 0,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "AccessNode",
+          "label": "__tmp0",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 19,
+              "end_line": 19,
+              "start_column": 30,
+              "end_column": 30,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "data": "__tmp0",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 1,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "LibraryNode",
+          "label": "cholesky",
+          "attributes": {
+            "lower": true,
+            "name": "cholesky",
+            "implementation": null,
+            "schedule": "Default",
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 0,
+              "end_line": 0,
+              "start_column": 0,
+              "end_column": 0,
+              "filename": null
+            },
+            "label": "cholesky",
+            "location": {},
+            "environments": [],
+            "in_connectors": {
+              "_a": null
+            },
+            "out_connectors": {
+              "_b": null
+            }
+          },
+          "id": 2,
+          "scope_entry": null,
+          "scope_exit": null,
+          "classpath": "dace.libraries.linalg.nodes.cholesky.Cholesky"
+        },
+        {
+          "type": "MapEntry",
+          "label": "_numpy_full__map[__i0=0:N, __i1=0:N]",
+          "attributes": {
+            "label": "_numpy_full__map",
+            "params": [
+              "__i0",
+              "__i1"
+            ],
+            "range": {
+              "type": "Range",
+              "ranges": [
+                {
+                  "start": "0",
+                  "end": "N - 1",
+                  "step": "1",
+                  "tile": "1"
+                },
+                {
+                  "start": "0",
+                  "end": "N - 1",
+                  "step": "1",
+                  "tile": "1"
+                }
+              ]
+            },
+            "schedule": "Default",
+            "unroll": false,
+            "collapse": 1,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 10,
+              "end_line": 10,
+              "start_column": 22,
+              "end_column": 22,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "is_collapsed": false,
+            "instrument": "No_Instrumentation",
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 3,
+          "scope_entry": null,
+          "scope_exit": "5"
+        },
+        {
+          "type": "Tasklet",
+          "label": "_numpy_full_",
+          "attributes": {
+            "code": {
+              "string_data": "__out = 0.0",
+              "language": "Python"
+            },
+            "state_fields": [],
+            "code_global": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_init": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_exit": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 10,
+              "end_line": 10,
+              "start_column": 22,
+              "end_column": 22,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "instrument": "No_Instrumentation",
+            "side_effects": null,
+            "label": "_numpy_full_",
+            "location": {},
+            "environments": [],
+            "in_connectors": {},
+            "out_connectors": {
+              "__out": null
+            }
+          },
+          "id": 4,
+          "scope_entry": "3",
+          "scope_exit": "5"
+        },
+        {
+          "type": "MapExit",
+          "label": "_numpy_full__map[__i0=0:N, __i1=0:N]",
+          "attributes": {
+            "in_connectors": {
+              "IN___tmp0": null
+            },
+            "out_connectors": {
+              "OUT___tmp0": null
+            }
+          },
+          "id": 5,
+          "scope_entry": "3",
+          "scope_exit": "5"
+        },
+        {
+          "type": "AccessNode",
+          "label": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 10,
+              "end_line": 10,
+              "start_column": 22,
+              "end_column": 22,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "data": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 6,
+          "scope_entry": null,
+          "scope_exit": null
+        }
+      ],
+      "edges": [
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": null,
+                "other_subset": null,
+                "data": null,
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": null,
+                "is_data_src": false,
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "3",
+          "dst": "4",
+          "dst_connector": null,
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N**2",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "A",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "N**2"
+              }
+            }
+          },
+          "src": "0",
+          "dst": "2",
+          "dst_connector": "_a",
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N**2",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "N**2"
+              }
+            }
+          },
+          "src": "5",
+          "dst": "6",
+          "dst_connector": null,
+          "src_connector": "OUT___tmp0"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "4",
+          "dst": "5",
+          "dst_connector": "IN___tmp0",
+          "src_connector": "__out"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N**2",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "__tmp0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "N**2"
+              }
+            }
+          },
+          "src": "2",
+          "dst": "1",
+          "dst_connector": null,
+          "src_connector": "_b"
+        }
+      ],
+      "attributes": {
+        "is_collapsed": false,
+        "nosync": false,
+        "instrument": "No_Instrumentation",
+        "symbol_instrument": "No_Instrumentation",
+        "symbol_instrument_condition": {
+          "string_data": "1",
+          "language": "CPP"
+        },
+        "executions": "1",
+        "dynamic_executions": false,
+        "ranges": {},
+        "location": {}
+      }
+    },
+    {
+      "type": "SDFGState",
+      "label": "MapState",
+      "id": 1,
+      "collapsed": false,
+      "scope_dict": {
+        "-1": [
+          0,
+          2,
+          3,
+          7,
+          10,
+          11
+        ],
+        "0": [
+          1,
+          4
+        ],
+        "4": [
+          5,
+          6
+        ],
+        "7": [
+          8,
+          9
+        ]
+      },
+      "nodes": [
+        {
+          "type": "MapEntry",
+          "label": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_11[i=0:N]",
+          "attributes": {
+            "label": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_11",
+            "params": [
+              "i"
+            ],
+            "range": {
+              "type": "Range",
+              "ranges": [
+                {
+                  "start": "0",
+                  "end": "N - 1",
+                  "step": "1",
+                  "tile": "1"
+                }
+              ]
+            },
+            "schedule": "Default",
+            "unroll": false,
+            "collapse": 1,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 11,
+              "end_line": 11,
+              "start_column": 4,
+              "end_column": 4,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "is_collapsed": false,
+            "instrument": "No_Instrumentation",
+            "in_connectors": {
+              "IN_A": null
+            },
+            "out_connectors": {
+              "OUT_A": null
+            }
+          },
+          "id": 0,
+          "scope_entry": null,
+          "scope_exit": "1"
+        },
+        {
+          "type": "MapExit",
+          "label": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_11[i=0:N]",
+          "attributes": {
+            "in_connectors": {
+              "IN___tmp0": null
+            },
+            "out_connectors": {
+              "OUT___tmp0": null
+            }
+          },
+          "id": 1,
+          "scope_entry": "0",
+          "scope_exit": "1"
+        },
+        {
+          "type": "AccessNode",
+          "label": "A",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 11,
+              "end_line": 11,
+              "start_column": 4,
+              "end_column": 4,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "data": "A",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 2,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "AccessNode",
+          "label": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 11,
+              "end_line": 11,
+              "start_column": 4,
+              "end_column": 4,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "data": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 3,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "MapEntry",
+          "label": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_11_4_12[j=i + 1:N]",
+          "attributes": {
+            "label": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_11_4_12",
+            "params": [
+              "j"
+            ],
+            "range": {
+              "type": "Range",
+              "ranges": [
+                {
+                  "start": "i + 1",
+                  "end": "N - 1",
+                  "step": "1",
+                  "tile": "1"
+                }
+              ]
+            },
+            "schedule": "Default",
+            "unroll": false,
+            "collapse": 1,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 12,
+              "end_line": 12,
+              "start_column": 28,
+              "end_column": 28,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "is_collapsed": false,
+            "instrument": "No_Instrumentation",
+            "in_connectors": {
+              "IN___tmp_13_22_r_in_from_2_0": null
+            },
+            "out_connectors": {
+              "OUT___tmp_13_22_r_in_from_2_0": null
+            }
+          },
+          "id": 4,
+          "scope_entry": "0",
+          "scope_exit": "5"
+        },
+        {
+          "type": "MapExit",
+          "label": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_11_4_12[j=i + 1:N]",
+          "attributes": {
+            "in_connectors": {
+              "IN___tmp_13_12_w_out_of_2_1": null
+            },
+            "out_connectors": {
+              "OUT___tmp_13_12_w_out_of_2_1": null
+            }
+          },
+          "id": 5,
+          "scope_entry": "4",
+          "scope_exit": "5"
+        },
+        {
+          "type": "Tasklet",
+          "label": "assign_13_12",
+          "attributes": {
+            "code": {
+              "string_data": "__out = __inp",
+              "language": "Python"
+            },
+            "state_fields": [],
+            "code_global": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_init": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_exit": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 13,
+              "end_line": 13,
+              "start_column": 17,
+              "end_column": 17,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "instrument": "No_Instrumentation",
+            "side_effects": null,
+            "label": "assign_13_12",
+            "location": {},
+            "environments": [],
+            "in_connectors": {
+              "__inp": null
+            },
+            "out_connectors": {
+              "__out": null
+            }
+          },
+          "id": 6,
+          "scope_entry": "4",
+          "scope_exit": "5"
+        },
+        {
+          "type": "MapEntry",
+          "label": "_Add__map[__i0=0:N, __i1=0:N]",
+          "attributes": {
+            "label": "_Add__map",
+            "params": [
+              "__i0",
+              "__i1"
+            ],
+            "range": {
+              "type": "Range",
+              "ranges": [
+                {
+                  "start": "0",
+                  "end": "N - 1",
+                  "step": "1",
+                  "tile": "1"
+                },
+                {
+                  "start": "0",
+                  "end": "N - 1",
+                  "step": "1",
+                  "tile": "1"
+                }
+              ]
+            },
+            "schedule": "Default",
+            "unroll": false,
+            "collapse": 1,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 19,
+              "end_line": 19,
+              "start_column": 45,
+              "end_column": 45,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "is_collapsed": false,
+            "instrument": "No_Instrumentation",
+            "in_connectors": {
+              "IN___tmp0": null,
+              "IN_npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0": null
+            },
+            "out_connectors": {
+              "OUT___tmp0": null,
+              "OUT_npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0": null
+            }
+          },
+          "id": 7,
+          "scope_entry": null,
+          "scope_exit": "9"
+        },
+        {
+          "type": "Tasklet",
+          "label": "_Add_",
+          "attributes": {
+            "code": {
+              "string_data": "__out = (__in1 + __in2)",
+              "language": "Python"
+            },
+            "state_fields": [],
+            "code_global": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_init": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_exit": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 19,
+              "end_line": 19,
+              "start_column": 45,
+              "end_column": 45,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "instrument": "No_Instrumentation",
+            "side_effects": null,
+            "label": "_Add_",
+            "location": {},
+            "environments": [],
+            "in_connectors": {
+              "__in1": null,
+              "__in2": null
+            },
+            "out_connectors": {
+              "__out": null
+            }
+          },
+          "id": 8,
+          "scope_entry": "7",
+          "scope_exit": "9"
+        },
+        {
+          "type": "MapExit",
+          "label": "_Add__map[__i0=0:N, __i1=0:N]",
+          "attributes": {
+            "in_connectors": {
+              "IN___tmp2": null
+            },
+            "out_connectors": {
+              "OUT___tmp2": null
+            }
+          },
+          "id": 9,
+          "scope_entry": "7",
+          "scope_exit": "9"
+        },
+        {
+          "type": "AccessNode",
+          "label": "__tmp0",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 19,
+              "end_line": 19,
+              "start_column": 45,
+              "end_column": 45,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "data": "__tmp0",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 10,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "AccessNode",
+          "label": "A",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 19,
+              "end_line": 19,
+              "start_column": 45,
+              "end_column": 45,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/cholesky2/cholesky2_dace.py"
+            },
+            "data": "A",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 11,
+          "scope_entry": null,
+          "scope_exit": null
+        }
+      ],
+      "edges": [
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "0",
+                "dynamic": true,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "1",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "A",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "1",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": -1
+              }
+            }
+          },
+          "src": "2",
+          "dst": "0",
+          "dst_connector": "IN_A",
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N**2",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "__tmp0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "N**2"
+              }
+            }
+          },
+          "src": "10",
+          "dst": "7",
+          "dst_connector": "IN___tmp0",
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N**2",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "N**2"
+              }
+            }
+          },
+          "src": "3",
+          "dst": "7",
+          "dst_connector": "IN_npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N - i - 1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "i",
+                      "end": "i",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "i + 1",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "A",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "i",
+                      "end": "i",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "i + 1",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "N - i - 1"
+              }
+            }
+          },
+          "src": "0",
+          "dst": "4",
+          "dst_connector": "IN___tmp_13_22_r_in_from_2_0",
+          "src_connector": "OUT_A"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "0",
+                "dynamic": true,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "1",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "1",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": -1
+              }
+            }
+          },
+          "src": "1",
+          "dst": "3",
+          "dst_connector": null,
+          "src_connector": "OUT___tmp0"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "__tmp0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "7",
+          "dst": "8",
+          "dst_connector": "__in1",
+          "src_connector": "OUT___tmp0"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N**2",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "A",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "N**2"
+              }
+            }
+          },
+          "src": "9",
+          "dst": "11",
+          "dst_connector": null,
+          "src_connector": "OUT___tmp2"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N - i - 1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "i",
+                      "end": "i",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "i + 1",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "i",
+                      "end": "i",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "i + 1",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "N - i - 1"
+              }
+            }
+          },
+          "src": "5",
+          "dst": "1",
+          "dst_connector": "IN___tmp0",
+          "src_connector": "OUT___tmp_13_12_w_out_of_2_1"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "i",
+                      "end": "i",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "j",
+                      "end": "j",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "A",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "i",
+                      "end": "i",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "j",
+                      "end": "j",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "4",
+          "dst": "6",
+          "dst_connector": "__inp",
+          "src_connector": "OUT___tmp_13_22_r_in_from_2_0"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "7",
+          "dst": "8",
+          "dst_connector": "__in2",
+          "src_connector": "OUT_npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "A",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "__i0",
+                      "end": "__i0",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "__i1",
+                      "end": "__i1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "8",
+          "dst": "9",
+          "dst_connector": "IN___tmp2",
+          "src_connector": "__out"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "i",
+                      "end": "i",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "j",
+                      "end": "j",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "npbench_benchmarks_polybench_cholesky2_cholesky2_dace_triu_ret_0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "i",
+                      "end": "i",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "j",
+                      "end": "j",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "6",
+          "dst": "5",
+          "dst_connector": "IN___tmp_13_12_w_out_of_2_1",
+          "src_connector": "__out"
+        }
+      ],
+      "attributes": {
+        "is_collapsed": false,
+        "nosync": false,
+        "instrument": "No_Instrumentation",
+        "symbol_instrument": "No_Instrumentation",
+        "symbol_instrument_condition": {
+          "string_data": "1",
+          "language": "CPP"
+        },
+        "executions": "1",
+        "dynamic_executions": false,
+        "ranges": {},
+        "location": {}
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "Edge",
+      "attributes": {
+        "data": {
+          "type": "InterstateEdge",
+          "attributes": {
+            "assignments": {},
+            "condition": {
+              "string_data": "1",
+              "language": "Python"
+            }
+          },
+          "label": ""
+        }
+      },
+      "src": "0",
+      "dst": "1"
+    }
+  ],
+  "sdfg_list_id": 0,
+  "start_state": 0,
+  "dace_version": "0.14.2"
+}

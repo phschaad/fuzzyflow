@@ -1,0 +1,735 @@
+{
+  "type": "SDFG",
+  "attributes": {
+    "arg_names": [
+      "A",
+      "p",
+      "r"
+    ],
+    "constants_prop": {},
+    "_arrays": {
+      "A": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "M",
+            "1"
+          ],
+          "total_size": "M*N",
+          "offset": [
+            "0",
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "pool": false,
+          "dtype": "float64",
+          "shape": [
+            "N",
+            "M"
+          ],
+          "transient": false,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      },
+      "p": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "1"
+          ],
+          "total_size": "M",
+          "offset": [
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "pool": false,
+          "dtype": "float64",
+          "shape": [
+            "M"
+          ],
+          "transient": false,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      },
+      "r": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "1"
+          ],
+          "total_size": "N",
+          "offset": [
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "pool": false,
+          "dtype": "float64",
+          "shape": [
+            "N"
+          ],
+          "transient": false,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      },
+      "__return_0": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "1"
+          ],
+          "total_size": "M",
+          "offset": [
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "pool": false,
+          "dtype": "float64",
+          "shape": [
+            "M"
+          ],
+          "transient": false,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      },
+      "__return_1": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "1"
+          ],
+          "total_size": "N",
+          "offset": [
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "pool": false,
+          "dtype": "float64",
+          "shape": [
+            "N"
+          ],
+          "transient": false,
+          "storage": "Default",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": null
+        }
+      }
+    },
+    "symbols": {
+      "M": "int64",
+      "N": "int64"
+    },
+    "instrument": "No_Instrumentation",
+    "global_code": {
+      "frame": {
+        "string_data": "",
+        "language": "CPP"
+      }
+    },
+    "init_code": {
+      "frame": {
+        "string_data": "",
+        "language": "CPP"
+      }
+    },
+    "exit_code": {
+      "frame": {
+        "string_data": "",
+        "language": "CPP"
+      }
+    },
+    "orig_sdfg": null,
+    "transformation_hist": [],
+    "logical_groups": [],
+    "openmp_sections": true,
+    "debuginfo": {
+      "type": "DebugInfo",
+      "start_line": 7,
+      "end_line": 10,
+      "start_column": 0,
+      "end_column": 0,
+      "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/bicg/bicg_dace.py"
+    },
+    "_pgrids": {},
+    "_subarrays": {},
+    "_rdistrarrays": {},
+    "callback_mapping": {},
+    "name": "npbench_benchmarks_polybench_bicg_bicg_dace_kernel",
+    "hash": "47be5f6ac333298e178d0d049bedf2ad2566c8e1b277d760bc00a93d22e97a43"
+  },
+  "nodes": [
+    {
+      "type": "SDFGState",
+      "label": "BinOp_10",
+      "id": 0,
+      "collapsed": false,
+      "scope_dict": {
+        "-1": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "nodes": [
+        {
+          "type": "AccessNode",
+          "label": "r",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 10,
+              "end_line": 10,
+              "start_column": 15,
+              "end_column": 15,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/bicg/bicg_dace.py"
+            },
+            "data": "r",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 0,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "AccessNode",
+          "label": "A",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 10,
+              "end_line": 10,
+              "start_column": 15,
+              "end_column": 15,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/bicg/bicg_dace.py"
+            },
+            "data": "A",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 1,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "AccessNode",
+          "label": "__return_0",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 10,
+              "end_line": 10,
+              "start_column": 15,
+              "end_column": 15,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/bicg/bicg_dace.py"
+            },
+            "data": "__return_0",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 2,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "LibraryNode",
+          "label": "_MatMult_",
+          "attributes": {
+            "alpha": 1,
+            "beta": 0,
+            "name": "_MatMult_",
+            "implementation": null,
+            "schedule": "Default",
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 0,
+              "end_line": 0,
+              "start_column": 0,
+              "end_column": 0,
+              "filename": null
+            },
+            "label": "_MatMult_",
+            "location": {},
+            "environments": [],
+            "in_connectors": {
+              "_a": null,
+              "_b": null
+            },
+            "out_connectors": {
+              "_c": null
+            }
+          },
+          "id": 3,
+          "scope_entry": null,
+          "scope_exit": null,
+          "classpath": "dace.libraries.blas.nodes.matmul.MatMul"
+        },
+        {
+          "type": "AccessNode",
+          "label": "p",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 10,
+              "end_line": 10,
+              "start_column": 22,
+              "end_column": 22,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/bicg/bicg_dace.py"
+            },
+            "data": "p",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 4,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "AccessNode",
+          "label": "__return_1",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 10,
+              "end_line": 10,
+              "start_column": 22,
+              "end_column": 22,
+              "filename": "/home/phil/Data/ETH/repos/npbench/npbench/benchmarks/polybench/bicg/bicg_dace.py"
+            },
+            "data": "__return_1",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 5,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "LibraryNode",
+          "label": "_MatMult_",
+          "attributes": {
+            "alpha": 1,
+            "beta": 0,
+            "name": "_MatMult_",
+            "implementation": null,
+            "schedule": "Default",
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 0,
+              "end_line": 0,
+              "start_column": 0,
+              "end_column": 0,
+              "filename": null
+            },
+            "label": "_MatMult_",
+            "location": {},
+            "environments": [],
+            "in_connectors": {
+              "_a": null,
+              "_b": null
+            },
+            "out_connectors": {
+              "_c": null
+            }
+          },
+          "id": 6,
+          "scope_entry": null,
+          "scope_exit": null,
+          "classpath": "dace.libraries.blas.nodes.matmul.MatMul"
+        }
+      ],
+      "edges": [
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "r",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "N"
+              }
+            }
+          },
+          "src": "0",
+          "dst": "3",
+          "dst_connector": "_a",
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "M*N",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "M - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "A",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "M - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "M*N"
+              }
+            }
+          },
+          "src": "1",
+          "dst": "6",
+          "dst_connector": "_a",
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "M*N",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "M - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "A",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    },
+                    {
+                      "start": "0",
+                      "end": "M - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "M*N"
+              }
+            }
+          },
+          "src": "1",
+          "dst": "3",
+          "dst_connector": "_b",
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "M",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "M - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "p",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "M - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "dst_subset": null,
+                "is_data_src": true,
+                "num_accesses": "M"
+              }
+            }
+          },
+          "src": "4",
+          "dst": "6",
+          "dst_connector": "_b",
+          "src_connector": null
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "M",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "M - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "__return_0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "M - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "M"
+              }
+            }
+          },
+          "src": "3",
+          "dst": "2",
+          "dst_connector": null,
+          "src_connector": "_c"
+        },
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "N",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "__return_1",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "N - 1",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "N"
+              }
+            }
+          },
+          "src": "6",
+          "dst": "5",
+          "dst_connector": null,
+          "src_connector": "_c"
+        }
+      ],
+      "attributes": {
+        "is_collapsed": false,
+        "nosync": false,
+        "instrument": "No_Instrumentation",
+        "symbol_instrument": "No_Instrumentation",
+        "symbol_instrument_condition": {
+          "string_data": "1",
+          "language": "CPP"
+        },
+        "executions": "1",
+        "dynamic_executions": false,
+        "ranges": {},
+        "location": {}
+      }
+    }
+  ],
+  "edges": [],
+  "sdfg_list_id": 0,
+  "start_state": 0,
+  "dace_version": "0.14.2"
+}

@@ -528,12 +528,22 @@ class TransformationVerifier:
 
             if status >= StatusLevel.VERBOSE:
                 print('Saving inputs for debugging purposes')
-            with open(os.path.join(self.success_dir, 'inputs'), 'w') as f:
-                pickle.dump(inputs, f)
-            with open(os.path.join(self.success_dir, 'constraints'), 'w') as f:
-                pickle.dump(cutout_symbol_constraints, f)
-            with open(os.path.join(self.success_dir, 'symbols'), 'w') as f:
-                pickle.dump(free_symbols_map, f)
+            with open(os.path.join(self.success_dir, 'inputs'), 'wb') as f:
+                pickle.dump(inputs, f, protocol=pickle.HIGHEST_PROTOCOL)
+            with open(os.path.join(self.success_dir, 'constraints'), 'wb') as f:
+                pickle.dump(
+                    cutout_symbol_constraints, f,
+                    protocol=pickle.HIGHEST_PROTOCOL
+                )
+            with open(os.path.join(self.success_dir, 'symbols'), 'wb') as f:
+                pickle.dump(
+                    free_symbols_map, f, protocol=pickle.HIGHEST_PROTOCOL
+                )
+
+            if status >= StatusLevel.VERBOSE:
+                print('Saving transformation')
+            with open(os.path.join(self.success_dir, 'xform.json'), 'w') as f:
+                json.dump(self.xform.to_json(), f, indent=4)
 
             if status >= StatusLevel.VERBOSE:
                 print('Generateing harness')
