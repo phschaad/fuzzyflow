@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 from alive_progress import alive_bar
 
 from dace.sdfg import SDFG
@@ -7,7 +7,9 @@ from dace.sdfg import SDFG
 import fuzzyflow as ff
 
 
-def _test_from_basedir(datadir: str, category_name: str):
+def _test_from_basedir(datadir: str, category_name: str,
+                       out_dir: Optional[str] = None,
+                       success_dir: Optional[str] = None,):
     verify_dict = dict()
     testdirs = os.listdir(datadir)
     bartitle = f'Testing {category_name}'
@@ -52,7 +54,9 @@ def _test_from_basedir(datadir: str, category_name: str):
                         )
 
                         verifier = ff.TransformationVerifier(
-                            xform, sdfg, ff.SamplingStrategy.SIMPLE_UNIFORM
+                            xform, sdfg, ff.SamplingStrategy.SIMPLE_UNIFORM,
+                            output_dir=out_dir,
+                            success_dir=success_dir
                         )
                         valid = valid and verifier.verify(
                             n_samples=100,
@@ -88,12 +92,16 @@ def _test_from_basedir(datadir: str, category_name: str):
 
 def test_multistate():
     datadir = './tests/data/multistate'
-    _test_from_basedir(datadir, 'multistate transformations')
+    fdir = './.test_results/failures/multistate/'
+    sdir = './.test_results/successes/multistate/'
+    _test_from_basedir(datadir, 'multistate transformations', fdir, sdir)
 
 
 def test_singlestate():
     datadir = './tests/data/singlestate'
-    _test_from_basedir(datadir, 'singlestate transformations')
+    fdir = './.test_results/failures/singlestate/'
+    sdir = './.test_results/successes/singlestate/'
+    _test_from_basedir(datadir, 'singlestate transformations', fdir, sdir)
 
 def main():
     test_singlestate()

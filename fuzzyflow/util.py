@@ -14,6 +14,7 @@ from dace.sdfg import nodes as nd
 from dace.sdfg.state import StateSubgraphView
 from dace.memlet import Memlet
 from dace.subsets import Range
+from dace.symbolic import SymExpr
 from dace.transformation.interstate.loop_detection import (DetectLoop,
                                                            find_for_loop)
 from dace.transformation.passes.pattern_matching import match_patterns
@@ -225,21 +226,45 @@ def cutout_determine_symbol_constraints(
         if isinstance(memlet.subset, Range):
             desc = ct.arrays[memlet.data]
             for i, r in enumerate(memlet.subset.ranges):
-                if isinstance(r[0], sp.Basic) and len(r[0].free_symbols) > 0:
-                    lhs_free = r[0].free_symbols
-                    rhs_free = r[1].free_symbols
+                lower_free_symbols = set()
+                upper_free_symbols = set()
+                step_free_symbols = set()
+                shape_free_symbols = set()
+                if isinstance(r[0], sp.Basic):
+                    lower_free_symbols = r[0].free_symbols
+                elif isinstance(r[0], SymExpr):
+                    lower_free_symbols = r[0].expr.free_symbols
+
+                if isinstance(r[1], sp.Basic):
+                    upper_free_symbols = r[1].free_symbols
+                elif isinstance(r[1], SymExpr):
+                    upper_free_symbols = r[1].expr.free_symbols
+
+                if isinstance(r[2], sp.Basic):
+                    step_free_symbols = r[2].free_symbols
+                elif isinstance(r[2], SymExpr):
+                    step_free_symbols = r[2].expr.free_symbols
+
+                if isinstance(desc.shape[i], sp.Basic):
+                    shape_free_symbols = desc.shape[i].free_symbols
+                elif isinstance(desc.shape[i], SymExpr):
+                    shape_free_symbols = desc.shape[i].expr.free_symbols
+
+                if len(lower_free_symbols) > 0:
+                    lhs_free = lower_free_symbols
+                    rhs_free = upper_free_symbols
                     if not any([s in lhs_free for s in rhs_free]):
                         memlet_constraints[r[0]] = (0, r[1] - 1)
-                if isinstance(r[1], sp.Basic) and len(r[1].free_symbols) > 0:
-                    lhs_free = r[1].free_symbols
-                    rhs_free = desc.shape[i].free_symbols if isinstance(
-                        desc.shape[i], sp.Basic
-                    ) else {}
+
+                if len(upper_free_symbols) > 0:
+                    lhs_free = upper_free_symbols
+                    rhs_free = shape_free_symbols
                     if not any([s in lhs_free for s in rhs_free]):
                         memlet_constraints[r[1]] = (0, desc.shape[i] - 1)
-                if isinstance(r[2], sp.Basic) and len(r[2].free_symbols) > 0:
-                    lhs_free = r[2].free_symbols
-                    rhs_free = r[1].free_symbols
+
+                if len(step_free_symbols) > 0:
+                    lhs_free = step_free_symbols
+                    rhs_free = upper_free_symbols
                     if not any([s in lhs_free for s in rhs_free]):
                         memlet_constraints[r[2]] = (1, r[1] - 1)
 

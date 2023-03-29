@@ -1,5 +1,6 @@
 import numpy as np
 import dace
+from dace.symbolic import symstr
 
 import struct
 
@@ -195,7 +196,7 @@ def generate_allocs(code_file, sdfg, args, kwargs):
     return allocated_syms
 
 
-def generate_validators(code_file, allocs, sdfg, args, kwargs):
+def generate_validators(code_file, allocs, sym_constraints, sdfg, args, kwargs):
     print("  /* validate if the input data matches the sdfg argument \"specification\" */", file=code_file)
     arglist = sdfg.arglist()
     for arg in arglist:
@@ -214,7 +215,12 @@ def generate_validators(code_file, allocs, sdfg, args, kwargs):
                     # here we could also reallocate to be able to continue - but then the data in the new region is undefined
                     print("  }", file=code_file)
         elif isinstance(dt, dace.data.Scalar):
-            pass
+            if arg in sym_constraints:
+                print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
+                print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
+        elif arg in sym_constraints:
+            print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
+            print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
         else:
             raise ValueError("Unsupported data type found while generating validators")
 
@@ -232,7 +238,7 @@ def compare_outputs(code_file, sdfg, args, kwargs):
     print("", file=code_file)
 
 
-def dump_args(out_lang, out_file, autoinit_args, sdfg1, sdfg2, *args, **kwargs):
+def dump_args(out_lang, out_file, autoinit_args, sym_constraints, sdfg1, sdfg2, *args, **kwargs):
     if out_lang == "c++":
         code_ext = ".cpp"
     if out_lang != "c++":
@@ -249,7 +255,7 @@ def dump_args(out_lang, out_file, autoinit_args, sdfg1, sdfg2, *args, **kwargs):
             print("  if (argc < 4) {\n    printf(\"Call this verifier with a data in and two datafile arguments, i.e: %s data_in data_out_1 data_out_2\\n\", argv[0]); exit(EXIT_FAILURE);\n  }\n", file=code_file)
         allocs = generate_allocs(code_file, sdfg1, args, kwargs) # allocate mem
         generate_reads(code_file, autoinit_args, sdfg1, args, kwargs) # read the inputs
-        sizes = generate_validators(code_file, allocs, sdfg1, args, kwargs)
+        sizes = generate_validators(code_file, allocs, sym_constraints, sdfg1, args, kwargs)
         print("", file=code_file)
         print("  /* call "+ sdfg1.name + " */", file=code_file)
         generate_call(code_file, sdfg1, args, kwargs) # generate the call
@@ -259,7 +265,7 @@ def dump_args(out_lang, out_file, autoinit_args, sdfg1, sdfg2, *args, **kwargs):
         print("  fclose(outdata1);\n", file=code_file)
         if sdfg2 is not None:
             generate_reads(code_file, autoinit_args, sdfg2, args, kwargs) # read the inputs
-            sizes = generate_validators(code_file, allocs, sdfg2, args, kwargs)
+            sizes = generate_validators(code_file, allocs, sym_constraints, sdfg2, args, kwargs)
             print("", file=code_file)
             print("  /* call "+ sdfg2.name + " */", file=code_file)
             generate_call(code_file, sdfg2, args, kwargs) # generate the call

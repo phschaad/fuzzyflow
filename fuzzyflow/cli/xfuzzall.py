@@ -42,6 +42,12 @@ def main():
     )
 
     parser.add_argument(
+        '--success-dir',
+        type=str,
+        help='<PATH TO SUCCESS CASE FOLDER>',
+    )
+
+    parser.add_argument(
         '-t',
         '--transformation',
         type=str,
@@ -143,6 +149,11 @@ def main():
             os.makedirs(args.output, exist_ok=True)
     output_dir = args.output if os.path.exists(args.output) else None
 
+    if args.success_dir is not None:
+        if not os.path.exists(args.success_dir):
+            os.makedirs(args.success_dir, exist_ok=True)
+    success_dir = args.success_dir if os.path.exists(args.success_dir) else None
+
     if args.restore and os.path.exists(progress_save_path):
         savefile = open(progress_save_path, 'r')
         if savefile is None:
@@ -166,9 +177,14 @@ def main():
                 instance_out_path = os.path.join(
                     output_dir, xf_name + '_' + str(i)
                 )
+            instance_success_path = None
+            if success_dir:
+                instance_success_path = os.path.join(
+                    success_dir, xf_name + '_' + str(i)
+                )
             verifier = TransformationVerifier(
-                match, sdfg, args.cutout_strategy, args.sampling_strategy,
-                instance_out_path
+                match, sdfg, args.sampling_strategy,
+                instance_out_path, instance_success_path
             )
             valid = verifier.verify(
                 args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
@@ -243,26 +259,32 @@ def main():
                 instance_out_path = os.path.join(
                     output_dir, xf_name + '_' + str(i)
                 )
-            verifier = TransformationVerifier(
-                match, sdfg, args.sampling_strategy, instance_out_path
-            )
-            try:
-                valid = verifier.verify(
-                    args.runs, status=StatusLevel.DEBUG,
-                    enforce_finiteness=True,
-                    symbol_constraints=symbol_constraints,
-                    data_constraints=data_constraints
+            instance_success_path = None
+            if success_dir:
+                instance_success_path = os.path.join(
+                    success_dir, xf_name + '_' + str(i)
                 )
-                if not valid:
-                    print('INVALID Transformation!')
-                    invalid.add(i)
-                    file_contents['invalid_indices'].append(i)
-                else:
-                    print('Transformation is valid')
-            except Exception as e:
-                failed.add(i)
-                print('Failed to validate with exception')
-                print(e)
+            verifier = TransformationVerifier(
+                match, sdfg, args.sampling_strategy, instance_out_path,
+                instance_success_path
+            )
+            #try:
+            valid = verifier.verify(
+                args.runs, status=StatusLevel.DEBUG,
+                enforce_finiteness=True,
+                symbol_constraints=symbol_constraints,
+                data_constraints=data_constraints
+            )
+            if not valid:
+                print('INVALID Transformation!')
+                invalid.add(i)
+                file_contents['invalid_indices'].append(i)
+            else:
+                print('Transformation is valid')
+            #except Exception as e:
+            #    failed.add(i)
+            #    print('Failed to validate with exception')
+            #    print(e)
             for folder in os.listdir('.dacecache'):
                 shutil.rmtree(os.path.join('.dacecache', folder))
             i += 1

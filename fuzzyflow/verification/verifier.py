@@ -10,6 +10,8 @@ import numpy as np
 from tqdm import tqdm
 from enum import Enum
 import json
+from struct import error as StructError
+import pickle
 
 import dace
 from dace import config, dtypes
@@ -28,6 +30,7 @@ from fuzzyflow.util import (StatusLevel,
                             apply_transformation,
                             cutout_determine_symbol_constraints)
 from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
+from fuzzyflow.harness_generator import sdfg2cpp
 
 
 class FailureReason(Enum):
@@ -43,6 +46,7 @@ class TransformationVerifier:
     sdfg: SDFG = None
     sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM
     output_dir: Optional[str] = None
+    success_dir: Optional[str] = None
 
     _cutout: Union[SDFG, SDFGCutout] = None
     _original_cutout: Union[SDFG, SDFGCutout] = None
@@ -52,12 +56,13 @@ class TransformationVerifier:
         xform: Union[SubgraphTransformation, PatternTransformation],
         sdfg: SDFG,
         sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM,
-        output_dir: Optional[str] = None,
+        output_dir: Optional[str] = None, success_dir: Optional[str] = None
     ):
         self.xform = xform
         self.sdfg = sdfg
         self.sampling_strategy = sampling_strategy
         self.output_dir = output_dir
+        self.success_dir = success_dir
 
     def cutout(
         self, status: StatusLevel = StatusLevel.OFF
@@ -406,6 +411,13 @@ class TransformationVerifier:
                                     'for container',
                                     dat
                                 )
+                        except StructError as e:
+                            print(e)
+                            if status >= StatusLevel.VERBOSE:
+                                bar.write(
+                                    'Exception when reading data back',
+                                    dat
+                                )
 
                     if not resample or resample_attempt > 11:
                         if resample_attempt > 11:
@@ -451,6 +463,84 @@ class TransformationVerifier:
                     str(n_crashes), 'trials out of', str(n_samples),
                     'caused crashes'
                 )
+
+        if self.success_dir is not None:
+            if status >= StatusLevel.VERBOSE:
+                print(
+                    'No problem found, sampling another input set to save for ',
+                    'potentially fuzzing externally.'
+                )
+            symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
+                orig_cutout, constraints_map=cutout_symbol_constraints,
+                maxval=128
+            )
+
+            constraints_map = None
+            if data_constraints is not None:
+                constraints_map = {
+                    k: (pystr_to_symbolic(lval), pystr_to_symbolic(hval))
+                    for k, (lval, hval) in data_constraints.items()
+                }
+            if status >= StatusLevel.VERBOSE:
+                print('Sampling inputs')
+            orig_in_config: Set[str] = set()
+            new_in_config: Set[str] = set()
+            output_config: Set[str] = set()
+            if strict_config and isinstance(orig_cutout, SDFGCutout):
+                orig_in_config = orig_cutout.input_config
+                output_config = orig_cutout.output_config
+            else:
+                for name, desc in orig_cutout.arrays.items():
+                    if not desc.transient:
+                        orig_in_config.add(name)
+                        output_config.add(name)
+            if isinstance(cutout, SDFGCutout):
+                new_in_config = cutout.input_config
+            else:
+                for name, desc in cutout.arrays.items():
+                    if not desc.transient:
+                        new_in_config.add(name)
+
+            inputs = sampler.sample_inputs(
+                orig_cutout, orig_in_config, symbols_map, decay_by,
+                constraints_map=constraints_map
+            )
+            init_args = {}
+            for name in inputs.keys():
+                init_args[name] = 'rand'
+
+            if status >= StatusLevel.VERBOSE:
+                print('Saving cutouts')
+
+            noinstr = dace.DataInstrumentationType.No_Instrumentation
+            for sd in cutout.all_sdfgs_recursive():
+                for s in sd.states():
+                    s.symbol_instrument = noinstr
+                    for dn in s.data_nodes():
+                        dn.instrument = noinstr
+            for sd in orig_cutout.all_sdfgs_recursive():
+                for s in sd.states():
+                    s.symbol_instrument = noinstr
+                    for dn in s.data_nodes():
+                        dn.instrument = noinstr
+            cutout.save(os.path.join(self.success_dir, 'post.sdfg'))
+            orig_cutout.save(os.path.join(self.success_dir, 'pre.sdfg'))
+
+            if status >= StatusLevel.VERBOSE:
+                print('Saving inputs for debugging purposes')
+            with open(os.path.join(self.success_dir, 'inputs'), 'w') as f:
+                pickle.dump(inputs, f)
+            with open(os.path.join(self.success_dir, 'constraints'), 'w') as f:
+                pickle.dump(cutout_symbol_constraints, f)
+            with open(os.path.join(self.success_dir, 'symbols'), 'w') as f:
+                pickle.dump(free_symbols_map, f)
+
+            if status >= StatusLevel.VERBOSE:
+                print('Generateing harness')
+
+            sdfg2cpp.dump_args('c++', os.path.join(self.success_dir, 'harness'),
+                               init_args, cutout_symbol_constraints, cutout,
+                               orig_cutout, **inputs, **free_symbols_map)
 
         return True
 

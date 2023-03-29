@@ -50,6 +50,12 @@ def main():
     )
 
     parser.add_argument(
+        '--success-dir',
+        type=str,
+        help='<PATH TO SUCCESS CASE FOLDER>',
+    )
+
+    parser.add_argument(
         '-s',
         '--sampling-strategy',
         type=SamplingStrategy,
@@ -87,6 +93,11 @@ def main():
             os.makedirs(args.output, exist_ok=True)
     output_dir = args.output if os.path.exists(args.output) else None
 
+    if args.success_dir is not None:
+        if not os.path.exists(args.success_dir):
+            os.makedirs(args.success_dir, exist_ok=True)
+    success_dir = args.success_dir if os.path.exists(args.success_dir) else None
+
     # Load and validate SDFG. Invalid SDFGs should fail this process.
     sdfg = SDFG.from_file(sdfg_path)
     sdfg.validate()
@@ -112,7 +123,8 @@ def main():
     )
 
     verifier = TransformationVerifier(
-        xform, sdfg, args.sampling_strategy, output_dir=output_dir
+        xform, sdfg, args.sampling_strategy, output_dir=output_dir,
+        success_dir=success_dir
     )
 
     valid = verifier.verify(

@@ -190,7 +190,7 @@ class DataSampler:
 
     def sample_symbols_map_for(
         self, sdfg: SDFG, maxval: int = 128, constraints_map: Dict = None
-    ) -> Dict[str, int]:
+    ) -> Tuple[Dict[str, int], Dict[str, int]]:
         cutoff = 10
 
         symbol_map = dict()
@@ -228,7 +228,7 @@ class DataSampler:
                     rethigh = int(res)
             elif isinstance(high, int):
                 retlow = low
-            if retlow is None or rethigh is None:
+            if retlow is None or rethigh is None or retlow > rethigh:
                 if count < cutoff:
                     deferred.append((k, (low, high, step), count + 1))
                 else:
