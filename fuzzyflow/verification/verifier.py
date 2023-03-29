@@ -4,7 +4,7 @@
 
 from copy import deepcopy
 from collections import deque
-from typing import Dict, List, Union, Optional, Set
+from typing import Dict, List, Union, Optional, Set, Any
 import os
 import numpy as np
 from tqdm import tqdm
@@ -93,21 +93,12 @@ class TransformationVerifier:
 
 
     def _catch_failure(
-        self, reason: FailureReason, details: Optional[str]
+        self, reason: FailureReason, details: Optional[str],
+        status: StatusLevel, inputs: Dict[str, Any],
+        symbol_constraints: Dict[str, Any], symbols: Dict[str, Any]
     ) -> None:
         if self.output_dir:
             os.makedirs(self.output_dir, exist_ok=True)
-
-            # Save SDFGs for cutout both before and after transforming.
-            self._original_cutout.save(
-                os.path.join(self.output_dir, 'pre.sdfg')
-            )
-            self._cutout.save(
-                os.path.join(self.output_dir, 'post.sdfg')
-            )
-            # Save the transformation.
-            with open(os.path.join(self.output_dir, 'xform.json'), 'w') as f:
-                json.dump(self.xform.to_json(), f, indent=4)
 
             # Save additional information about the failure.
             with open(os.path.join(self.output_dir, reason.value), 'w') as f:
@@ -119,6 +110,55 @@ class TransformationVerifier:
                     f.writelines([
                         'Reason:' + reason.value + '\n', 'Details: -'
                     ])
+
+            if status >= StatusLevel.VERBOSE:
+                print('Saving cutouts')
+
+            noinstr = dace.DataInstrumentationType.No_Instrumentation
+            for sd in self._cutout.all_sdfgs_recursive():
+                for s in sd.states():
+                    s.symbol_instrument = noinstr
+                    for dn in s.data_nodes():
+                        dn.instrument = noinstr
+            for sd in self._original_cutout.all_sdfgs_recursive():
+                for s in sd.states():
+                    s.symbol_instrument = noinstr
+                    for dn in s.data_nodes():
+                        dn.instrument = noinstr
+            self._cutout.save(os.path.join(self.output_dir, 'post.sdfg'))
+            self._original_cutout.save(
+                os.path.join(self.output_dir, 'pre.sdfg')
+            )
+
+            if status >= StatusLevel.VERBOSE:
+                print('Saving inputs for debugging purposes')
+            with open(os.path.join(self.output_dir, 'inputs'), 'wb') as f:
+                pickle.dump(inputs, f, protocol=pickle.HIGHEST_PROTOCOL)
+            with open(os.path.join(self.output_dir, 'constraints'), 'wb') as f:
+                pickle.dump(
+                    symbol_constraints, f,
+                    protocol=pickle.HIGHEST_PROTOCOL
+                )
+            with open(os.path.join(self.output_dir, 'symbols'), 'wb') as f:
+                pickle.dump(
+                    symbols, f, protocol=pickle.HIGHEST_PROTOCOL
+                )
+
+            if status >= StatusLevel.VERBOSE:
+                print('Saving transformation')
+            with open(os.path.join(self.output_dir, 'xform.json'), 'w') as f:
+                json.dump(self.xform.to_json(), f, indent=4)
+
+            if status >= StatusLevel.VERBOSE:
+                print('Generateing harness')
+
+            init_args = {}
+            for name in inputs.keys():
+                init_args[name] = 'rand'
+
+            sdfg2cpp.dump_args('c++', os.path.join(self.output_dir, 'harness'),
+                               init_args, symbol_constraints, self._cutout,
+                               self._original_cutout, **inputs, **symbols)
 
 
     def _do_verify(
