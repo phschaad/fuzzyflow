@@ -203,7 +203,7 @@ class DataSampler:
             if k in constraints_map:
                 deferred.append((k, constraints_map[k], 0))
             else:
-                symbol_map[k] = random.randint(1, maxval)
+                symbol_map[k] = random.randint(-maxval, maxval)
                 free_symbols_map[k] = symbol_map[k]
 
         while len(deferred) > 0:
@@ -227,16 +227,16 @@ class DataSampler:
                 if isinstance(res, Number) and res.is_Integer:
                     rethigh = int(res)
             elif isinstance(high, int):
-                retlow = low
+                rethigh = high
             if retlow is None or rethigh is None or retlow > rethigh:
                 if count < cutoff:
                     deferred.append((k, (low, high, step), count + 1))
                 else:
-                    symbol_map[k] = random.randint(1, maxval)
+                    symbol_map[k] = random.randint(-maxval, maxval)
                     free_symbols_map[k] = symbol_map[k]
                     print(
-                        'Warning: sampling dependent symbol between', str(1),
-                        'and', str(maxval),
+                        'Warning: sampling dependent symbol between',
+                        str(-maxval), 'and', str(maxval),
                         'because dependent value cannot be found'
                     )
             else:

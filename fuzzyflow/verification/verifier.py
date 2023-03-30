@@ -328,7 +328,7 @@ class TransformationVerifier:
                     bar.write('Sampling symbols')
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                     orig_cutout, constraints_map=cutout_symbol_constraints,
-                    maxval=128
+                    maxval=1024
                 )
 
                 constraints_map = None
@@ -581,7 +581,7 @@ class TransformationVerifier:
                 )
             symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                 orig_cutout, constraints_map=cutout_symbol_constraints,
-                maxval=128
+                maxval=1024
             )
 
             constraints_map = None
