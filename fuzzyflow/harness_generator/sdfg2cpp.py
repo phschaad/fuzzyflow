@@ -213,12 +213,12 @@ def generate_validators(code_file, allocs, sym_constraints, sdfg, args, kwargs):
             for alloc in allocs:
                 (name, size, elemsize, typec, allocated) = alloc
                 if str(name) == str(arg):
-                    print("  if ("+str(size)+"*"+str(elemsize) + " < (" + str(dt.total_size) + ")*"+str(elemsize)+") { //check if "+str(arg)+" has correct size (lhs=allocated size, rhs=symbolic size)", file=code_file)
-                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+str(dt.total_size)+"=%i MB) - resizing\\n\", ("+str(dt.total_size)+"*"+str(elemsize)+")/1000000);", file=code_file)
-                    print("    if ("+str(dt.total_size)+" == 0) {printf(\"Current symbols lead to a null allocation - bail out.\\n\"); return 0;}", file=code_file)
-                    print("    if ("+str(dt.total_size)+" < 0) {printf(\"Current symbols lead to negative allocation - bail out.\\n\"); return 0;}", file=code_file)
-                    print("    if ("+str(dt.total_size)+" > 100000000) {printf(\"Current symbols lead to a huge allocation - bail out.\\n\"); return 0;}", file=code_file)
-                    print("    "+str(name)+ " = ("+str(typec)+"*) realloc("+str(name)+", (" + str(dt.total_size) + ")*"+str(elemsize)+");", file=code_file)
+                    print("  if ("+str(size)+"*"+str(elemsize) + " < (" + symstr(dt.total_size) + ")*"+str(elemsize)+") { //check if "+str(arg)+" has correct size (lhs=allocated size, rhs=symbolic size)", file=code_file)
+                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+symstr(dt.total_size)+"=%i MB) - resizing\\n\", ("+symstr(dt.total_size)+"*"+str(elemsize)+")/1000000);", file=code_file)
+                    print("    if ("+symstr(dt.total_size)+" == 0) {printf(\"Current symbols lead to a null allocation - bail out.\\n\"); return 0;}", file=code_file)
+                    print("    if ("+symstr(dt.total_size)+" < 0) {printf(\"Current symbols lead to negative allocation - bail out.\\n\"); return 0;}", file=code_file)
+                    print("    if ("+symstr(dt.total_size)+" > 100000000) {printf(\"Current symbols lead to a huge allocation - bail out.\\n\"); return 0;}", file=code_file)
+                    print("    "+str(name)+ " = ("+str(typec)+"*) realloc("+str(name)+", (" + symstr(dt.total_size) + ")*"+str(elemsize)+");", file=code_file)
                     print("    assert("+str(name)+" != NULL);", file=code_file)
                     # here we could also reallocate to be able to continue - but then the data in the new region is undefined
                     print("  }", file=code_file)
