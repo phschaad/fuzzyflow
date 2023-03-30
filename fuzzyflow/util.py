@@ -125,7 +125,7 @@ def apply_transformation(
         sdfg.append_transformation(xform)
         xform.apply(sdfg)
     else:
-        xform.apply_pattern(sdfg)
+        xform.apply_pattern(append=False)
 
 
 def load_transformation_from_file(

@@ -35,6 +35,7 @@ from fuzzyflow.harness_generator import sdfg2cpp
 
 
 class FailureReason(Enum):
+    EXCEPTION = 'EXCEPTION'
     FAILED_VALIDATE = 'FAILED_VALIDATE'
     COMPILATION_FAILURE = 'COMPILATION_FAILURE'
     EXIT_CODE_MISMATCH = 'EXIT_CODE_MISMATCH'
@@ -124,6 +125,22 @@ class TransformationVerifier:
                 print('Saving cutouts')
 
             noinstr = dace.DataInstrumentationType.No_Instrumentation
+            if reason == FailureReason.EXCEPTION:
+                for sd in self.sdfg.all_sdfgs_recursive():
+                    for s in sd.states():
+                        s.symbol_instrument = noinstr
+                        for dn in s.data_nodes():
+                            dn.instrument = noinstr
+                self.sdfg.save(os.path.join(self.output_dir, 'orig.sdfg'))
+
+                if status >= StatusLevel.VERBOSE:
+                    print('Saving transformation')
+                with open(os.path.join(
+                    self.output_dir, 'xform.json'
+                ), 'w') as f:
+                    json.dump(self.xform.to_json(), f, indent=4)
+                return
+
             for sd in self._cutout.all_sdfgs_recursive():
                 for s in sd.states():
                     s.symbol_instrument = noinstr
@@ -175,8 +192,9 @@ class TransformationVerifier:
                 try:
                     sdfg2cpp.dump_args('c++',
                                        os.path.join(self.output_dir, 'harness'),
-                                       init_args, symbol_constraints, self._cutout,
-                                       self._original_cutout, **inputs, **symbols)
+                                       init_args, symbol_constraints,
+                                       self._cutout, self._original_cutout,
+                                       **inputs, **symbols)
                 except Exception:
                     pass
 
@@ -219,22 +237,30 @@ class TransformationVerifier:
             # Cutout is equivalent to the entire SDFG.
             for name, desc in orig_cutout.arrays.items():
                 if not desc.transient:
-                    if (name not in cutout.arrays or
-                        not cutout.arrays[name].transient):
+                    if name not in cutout.arrays:
                         print(
                             'Warning: Transformation removed something from ' +
                             'the output configuration!'
                         )
                         cutout.add_datadesc(name, orig_cutout.arrays[name])
+                    if not cutout.arrays[name].transient:
+                        cutout.arrays[name].transient = True
 
         # Instrumentation.
+        to_save = set()
+        if isinstance(cutout, SDFGCutout):
+            to_save = cutout.output_config
+        else:
+            for name, desc in cutout.arrays.items():
+                if not desc.transient:
+                    to_save.add(name)
         for s in cutout.states():
             for dn in s.data_nodes():
-                if dn.data in cutout.output_config:
+                if dn.data in to_save:
                     dn.instrument = dtypes.DataInstrumentationType.Save
         for s in orig_cutout.states():
             for dn in s.data_nodes():
-                if dn.data in orig_cutout.output_config:
+                if dn.data in to_save:
                     dn.instrument = dtypes.DataInstrumentationType.Save
 
         if debug_save_path is not None:
@@ -656,7 +682,12 @@ class TransformationVerifier:
             config.Config.set('profiling', value=False)
             config.Config.set('debugprint', value=False)
             config.Config.set('cache', value='name')
-            return self._do_verify(
-                n_samples, status, debug_save_path, enforce_finiteness,
-                symbol_constraints, data_constraints, strict_config
-            )
+            try:
+                return self._do_verify(
+                    n_samples, status, debug_save_path, enforce_finiteness,
+                    symbol_constraints, data_constraints, strict_config
+                )
+            except Exception as e:
+                self._catch_failure(
+                    FailureReason.EXCEPTION, str(e), status, exception=e
+                )
