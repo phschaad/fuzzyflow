@@ -94,8 +94,9 @@ class TransformationVerifier:
 
     def _catch_failure(
         self, reason: FailureReason, details: Optional[str],
-        status: StatusLevel, inputs: Dict[str, Any],
-        symbol_constraints: Dict[str, Any], symbols: Dict[str, Any]
+        status: StatusLevel, inputs: Optional[Dict[str, Any]] = None,
+        symbol_constraints: Optional[Dict[str, Any]] = None,
+        symbols: Optional[Dict[str, Any]] = None
     ) -> None:
         if self.output_dir:
             os.makedirs(self.output_dir, exist_ok=True)
@@ -132,33 +133,41 @@ class TransformationVerifier:
 
             if status >= StatusLevel.VERBOSE:
                 print('Saving inputs for debugging purposes')
-            with open(os.path.join(self.output_dir, 'inputs'), 'wb') as f:
-                pickle.dump(inputs, f, protocol=pickle.HIGHEST_PROTOCOL)
-            with open(os.path.join(self.output_dir, 'constraints'), 'wb') as f:
-                pickle.dump(
-                    symbol_constraints, f,
-                    protocol=pickle.HIGHEST_PROTOCOL
-                )
-            with open(os.path.join(self.output_dir, 'symbols'), 'wb') as f:
-                pickle.dump(
-                    symbols, f, protocol=pickle.HIGHEST_PROTOCOL
-                )
+            if inputs is not None:
+                with open(os.path.join(self.output_dir, 'inputs'), 'wb') as f:
+                    pickle.dump(inputs, f, protocol=pickle.HIGHEST_PROTOCOL)
+            if symbol_constraints is not None:
+                with open(os.path.join(
+                    self.output_dir, 'constraints'
+                ), 'wb') as f:
+                    pickle.dump(
+                        symbol_constraints, f,
+                        protocol=pickle.HIGHEST_PROTOCOL
+                    )
+            if symbols is not None:
+                with open(os.path.join(self.output_dir, 'symbols'), 'wb') as f:
+                    pickle.dump(
+                        symbols, f, protocol=pickle.HIGHEST_PROTOCOL
+                    )
 
             if status >= StatusLevel.VERBOSE:
                 print('Saving transformation')
             with open(os.path.join(self.output_dir, 'xform.json'), 'w') as f:
                 json.dump(self.xform.to_json(), f, indent=4)
 
-            if status >= StatusLevel.VERBOSE:
-                print('Generateing harness')
+            if (inputs is not None and symbol_constraints is not None and
+                symbols is not None):
+                if status >= StatusLevel.VERBOSE:
+                    print('Generateing harness')
 
-            init_args = {}
-            for name in inputs.keys():
-                init_args[name] = 'rand'
+                init_args = {}
+                for name in inputs.keys():
+                    init_args[name] = 'rand'
 
-            sdfg2cpp.dump_args('c++', os.path.join(self.output_dir, 'harness'),
-                               init_args, symbol_constraints, self._cutout,
-                               self._original_cutout, **inputs, **symbols)
+                sdfg2cpp.dump_args('c++',
+                                   os.path.join(self.output_dir, 'harness'),
+                                   init_args, symbol_constraints, self._cutout,
+                                   self._original_cutout, **inputs, **symbols)
 
 
     def _do_verify(
@@ -175,7 +184,7 @@ class TransformationVerifier:
         try:
             apply_transformation(cutout, self.xform)
         except InvalidSDFGError as e:
-            self._catch_failure(FailureReason.FAILED_VALIDATE, str(e))
+            self._catch_failure(FailureReason.FAILED_VALIDATE, str(e), status)
             return False
 
         cutout._name = cutout.name + '_transformed'
@@ -231,10 +240,12 @@ class TransformationVerifier:
         try:
             prog_xformed = cutout.compile(validate=True)
         except InvalidSDFGError as e:
-            self._catch_failure(FailureReason.FAILED_VALIDATE, str(e))
+            self._catch_failure(FailureReason.FAILED_VALIDATE, str(e), status)
             return False
         except Exception as e:
-            self._catch_failure(FailureReason.COMPILATION_FAILURE, str(e))
+            self._catch_failure(
+                FailureReason.COMPILATION_FAILURE, str(e), status
+            )
             return False
         if status >= StatusLevel.DEBUG:
             print(
@@ -314,6 +325,7 @@ class TransformationVerifier:
                 for k, v in inputs.items():
                     if not strict_config or k in new_in_config:
                         inputs_xformed[k] = deepcopy(v)
+                inputs_save = deepcopy(inputs)
 
                 if status >= StatusLevel.VERBOSE:
                     bar.write(
@@ -383,7 +395,9 @@ class TransformationVerifier:
                     self._catch_failure(
                         FailureReason.EXIT_CODE_MISMATCH,
                         f'Exit code (${ret_xformed}) does not match oringinal' +
-                        f' exit code (${ret_orig})'
+                        f' exit code (${ret_orig})',
+                        status, inputs_save, cutout_symbol_constraints,
+                        free_symbols_map
                     )
                     return False
                 elif ret_orig == 0 and ret_xformed == 0:
@@ -404,7 +418,9 @@ class TransformationVerifier:
                                         bar.write('System state mismatch!')
                                     self._catch_failure(
                                         FailureReason.SYSTEM_STATE_MISMATCH,
-                                        f'Missing input ${dat}'
+                                        f'Missing input ${dat}', status,
+                                        inputs_save, cutout_symbol_constraints,
+                                        free_symbols_map
                                     )
                                     return False
                                 if isinstance(cutout.arrays[dat], Scalar):
@@ -424,7 +440,10 @@ class TransformationVerifier:
                                         bar.write('Result mismatch!')
                                     self._catch_failure(
                                         FailureReason.SYSTEM_STATE_MISMATCH,
-                                        f'Mismatching results for ${dat}'
+                                        f'Mismatching results for ${dat}',
+                                        status, inputs_save,
+                                        cutout_symbol_constraints,
+                                        free_symbols_map
                                     )
                                     return False
                             else:
@@ -435,7 +454,10 @@ class TransformationVerifier:
                                         bar.write('Result mismatch!')
                                     self._catch_failure(
                                         FailureReason.SYSTEM_STATE_MISMATCH,
-                                        f'Mismatching results for ${dat}'
+                                        f'Mismatching results for ${dat}',
+                                        status, inputs_save,
+                                        cutout_symbol_constraints,
+                                        free_symbols_map
                                     )
                                     return False
                         except KeyError:
