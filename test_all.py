@@ -84,26 +84,27 @@ def main():
     for graph_name in os.listdir('tests/npbench_graphs'):
         if graph_name in GRAPH_IGNORE_LIST:
             continue
-        sdfg = SDFG.from_file(f'tests/npbench_graphs/{graph_name}')
-        optimizer = SDFGOptimizer(sdfg)
-        pattern_matches = optimizer.get_pattern_matches()
-        i = 0
-        for pattern in pattern_matches:
-            if ignore_regex.search(pattern.__class__.__name__):
-                continue
+        print('Moving on to', graph_name)
+        try:
+            sdfg = SDFG.from_file(f'tests/npbench_graphs/{graph_name}')
+            optimizer = SDFGOptimizer(sdfg)
+            pattern_matches = optimizer.get_pattern_matches()
+            i = 0
+            for pattern in pattern_matches:
+                if ignore_regex.search(pattern.__class__.__name__):
+                    continue
 
-            print(f'Verifying {pattern.__class__.__name__} on {graph_name}')
-            out_dir = os.path.join(
-                '.testdata', prefix, 'npbench',
-                graph_name.split('.')[0], 'fails',
-                pattern.__class__.__name__ + '_' + str(i)
-            )
-            success_dir = os.path.join(
-                '.testdata', prefix, 'npbench',
-                graph_name.split('.')[0], 'successes',
-                pattern.__class__.__name__ + '_' + str(i)
-            )
-            try:
+                print(f'Verifying {pattern.__class__.__name__} on {graph_name}')
+                out_dir = os.path.join(
+                    '.testdata', prefix, 'npbench',
+                    graph_name.split('.')[0], 'fails',
+                    pattern.__class__.__name__ + '_' + str(i)
+                )
+                success_dir = os.path.join(
+                    '.testdata', prefix, 'npbench',
+                    graph_name.split('.')[0], 'successes',
+                    pattern.__class__.__name__ + '_' + str(i)
+                )
                 verifier = ff.TransformationVerifier(
                     pattern, sdfg, output_dir=out_dir, success_dir=success_dir
                 )
@@ -112,10 +113,10 @@ def main():
                 )
                 if not valid:
                     print('Instance invalid!')
-            except Exception:
-                print('Exception occurred!')
 
-            i += 1
+                i += 1
+        except Exception:
+            print('Exception occurred!')
 
 
 if __name__ == '__main__':
