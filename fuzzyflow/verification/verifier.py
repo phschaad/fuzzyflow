@@ -74,7 +74,8 @@ class TransformationVerifier:
             if status >= StatusLevel.DEBUG:
                 print('Finding ideal cutout')
             self._cutout = SDFGCutout.from_transformation(
-                self.sdfg, self.xform, use_alibi_nodes=False
+                self.sdfg, self.xform, use_alibi_nodes=False,
+                reduce_input_config=False
             )
             if status >= StatusLevel.DEBUG:
                 print('Cutout obtained')

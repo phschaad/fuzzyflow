@@ -33,21 +33,21 @@ GRAPH_IGNORE_LIST = [
     #'compute.sdfg',
     #'contour_integral.sdfg',
     #'conv2d_bias.sdfg',
-    'correlation.sdfg', # Done
+    #'correlation.sdfg', # Done
     #'covariance.sdfg',
     #'crc16.sdfg',
     #'deriche.sdfg',
     #'doitgen.sdfg',
     #'durbin.sdfg',
     #'fdtd_2d.sdfg',
-    'floyd_warshall.sdfg', # Done
+    #'floyd_warshall.sdfg', # Done
     #'gemm.sdfg',
     #'gemver.sdfg',
     #'gesummv.sdfg',
     #'go_fast.sdfg',
     #'gramschmidt.sdfg',
     #'hdiff.sdfg',
-    'heat_3d.sdfg', # Done
+    #'heat_3d.sdfg', # Done
     #'jacobi_1d.sdfg',
     #'jacobi_2d.sdfg',
     #'k2mm.sdfg',
@@ -99,12 +99,15 @@ def main():
                 '.testdata', 'npbench', graph_name.split('.')[0], 'successes',
                 'pattern_' + str(i), pattern.__class__.__name__
             )
-            verifier = ff.TransformationVerifier(
-                pattern, sdfg, output_dir=out_dir, success_dir=success_dir
-            )
-            valid = verifier.verify(n_samples=100, status=ff.StatusLevel.DEBUG)
-            if not valid:
-                print('Instance invalid!')
+            try:
+                verifier = ff.TransformationVerifier(
+                    pattern, sdfg, output_dir=out_dir, success_dir=success_dir
+                )
+                valid = verifier.verify(n_samples=100, status=ff.StatusLevel.DEBUG)
+                if not valid:
+                    print('Instance invalid!')
+            except Exception:
+                print('Exception occurred!')
 
             i += 1
 
