@@ -12,6 +12,7 @@ from enum import Enum
 import json
 from struct import error as StructError
 import pickle
+import traceback
 
 import dace
 from dace import config, dtypes
@@ -38,6 +39,7 @@ class FailureReason(Enum):
     COMPILATION_FAILURE = 'COMPILATION_FAILURE'
     EXIT_CODE_MISMATCH = 'EXIT_CODE_MISMATCH'
     SYSTEM_STATE_MISMATCH = 'SYSTEM_STATE_MISMATCH'
+    FAILED_TO_APPLY = 'FAILED_TO_APPLY'
 
 
 class TransformationVerifier:
@@ -81,6 +83,8 @@ class TransformationVerifier:
     def _data_report_get_latest_version(
         self, report: InstrumentedDataReport, item: str
     ) -> dace.data.ArrayLike:
+        if report is None:
+            return None
         filenames = report.files[item]
         desc = report.sdfg.arrays[item]
         dtype: dtypes.typeclass = desc.dtype
@@ -96,7 +100,8 @@ class TransformationVerifier:
         self, reason: FailureReason, details: Optional[str],
         status: StatusLevel, inputs: Optional[Dict[str, Any]] = None,
         symbol_constraints: Optional[Dict[str, Any]] = None,
-        symbols: Optional[Dict[str, Any]] = None
+        symbols: Optional[Dict[str, Any]] = None,
+        exception: Optional[Exception] = None
     ) -> None:
         if self.output_dir:
             os.makedirs(self.output_dir, exist_ok=True)
@@ -111,6 +116,9 @@ class TransformationVerifier:
                     f.writelines([
                         'Reason:' + reason.value + '\n', 'Details: -'
                     ])
+
+                if exception is not None:
+                    traceback.print_tb(exception.__traceback__, file=f)
 
             if status >= StatusLevel.VERBOSE:
                 print('Saving cutouts')
@@ -184,7 +192,14 @@ class TransformationVerifier:
         try:
             apply_transformation(cutout, self.xform)
         except InvalidSDFGError as e:
-            self._catch_failure(FailureReason.FAILED_VALIDATE, str(e), status)
+            self._catch_failure(
+                FailureReason.FAILED_VALIDATE, str(e), status, exception=e
+            )
+            return False
+        except Exception as e:
+            self._catch_failure(
+                FailureReason.FAILED_TO_APPLY, str(e), status, exception=e
+            )
             return False
 
         cutout._name = cutout.name + '_transformed'
@@ -240,11 +255,13 @@ class TransformationVerifier:
         try:
             prog_xformed = cutout.compile(validate=True)
         except InvalidSDFGError as e:
-            self._catch_failure(FailureReason.FAILED_VALIDATE, str(e), status)
+            self._catch_failure(
+                FailureReason.FAILED_VALIDATE, str(e), status, exception=e
+            )
             return False
         except Exception as e:
             self._catch_failure(
-                FailureReason.COMPILATION_FAILURE, str(e), status
+                FailureReason.COMPILATION_FAILURE, str(e), status, exception=e
             )
             return False
         if status >= StatusLevel.DEBUG:
@@ -408,7 +425,8 @@ class TransformationVerifier:
                                 orig_drep, dat
                             )
 
-                            if dat in xformed_drep.files:
+                            if (xformed_drep is not None and
+                                dat in xformed_drep.files):
                                 nval = self._data_report_get_latest_version(
                                     xformed_drep, dat
                                 )

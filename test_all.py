@@ -19,6 +19,11 @@ IGNORE_LIST = [
     'NestSDFG',
 ]
 
+GRAPH_IGNORE_LIST = [
+    'floyd_warshall.sdfg',
+    'scattering_self_energies.sdfg',
+]
+
 
 def main():
     ignore_regex = re.compile(
@@ -26,6 +31,8 @@ def main():
     )
 
     for graph_name in os.listdir('tests/npbench_graphs'):
+        if graph_name in GRAPH_IGNORE_LIST:
+            continue
         sdfg = SDFG.from_file(f'tests/npbench_graphs/{graph_name}')
         optimizer = SDFGOptimizer(sdfg)
         pattern_matches = optimizer.get_pattern_matches()

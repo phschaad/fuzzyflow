@@ -147,12 +147,16 @@ def main():
     if args.output is not None:
         if not os.path.exists(args.output):
             os.makedirs(args.output, exist_ok=True)
-    output_dir = args.output if os.path.exists(args.output) else None
+    output_dir = args.output if (
+        args.output is not None and os.path.exists(args.output)
+    ) else None
 
     if args.success_dir is not None:
         if not os.path.exists(args.success_dir):
             os.makedirs(args.success_dir, exist_ok=True)
-    success_dir = args.success_dir if os.path.exists(args.success_dir) else None
+    success_dir = args.success_dir if (
+        args.success_dir is not None and os.path.exists(args.success_dir)
+    ) else None
 
     if args.restore and os.path.exists(progress_save_path):
         savefile = open(progress_save_path, 'r')
