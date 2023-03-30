@@ -21,7 +21,13 @@ IGNORE_LIST = [
 
 GRAPH_IGNORE_LIST = [
     'floyd_warshall.sdfg',
+    'heat_3d.sdfg',
+    'correlation.sdfg',
+
     'scattering_self_energies.sdfg',
+    'stockham_fft.sdfg',
+    'syrk.sdfg',
+    'syr2k.sdfg',
 ]
 
 

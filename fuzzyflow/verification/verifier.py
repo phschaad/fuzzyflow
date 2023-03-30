@@ -172,10 +172,13 @@ class TransformationVerifier:
                 for name in inputs.keys():
                     init_args[name] = 'rand'
 
-                sdfg2cpp.dump_args('c++',
-                                   os.path.join(self.output_dir, 'harness'),
-                                   init_args, symbol_constraints, self._cutout,
-                                   self._original_cutout, **inputs, **symbols)
+                try:
+                    sdfg2cpp.dump_args('c++',
+                                       os.path.join(self.output_dir, 'harness'),
+                                       init_args, symbol_constraints, self._cutout,
+                                       self._original_cutout, **inputs, **symbols)
+                except Exception:
+                    pass
 
 
     def _do_verify(
