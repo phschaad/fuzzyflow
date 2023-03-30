@@ -14,6 +14,15 @@ def remove_inst(sdfg):
             else:
                 n.instrument = dtypes.InstrumentationType.No_Instrumentation
 
+def harness_fixup():
+    fin = open("harness.cpp", "rt")
+    data = fin.read()
+    data = data.replace('N**2', 'N*N')
+    fin.close()
+    fin = open("harness.cpp", "wt")
+    fin.write(data)
+    fin.close()
+
 def fuzz():
     sdfg_pre = dace.SDFG.from_file('pre.sdfg')
     sdfg_post = dace.SDFG.from_file('post.sdfg')
@@ -45,14 +54,18 @@ def fuzz():
     os.system("mkdir afl_seeds")
     os.system("cp harness.dat afl_seeds")
     os.system("mkdir afl_finds")
-    afl_cmd = AFL_PATH+"afl-fuzz -i afl_seeds -o afl_finds -t 5000 -V 300 -- ./harness @@ out1.dat out2.dat"
+    afl_cmd = AFL_PATH+"afl-fuzz -i afl_seeds -o afl_finds -t 10000 -V 300 -- ./harness @@ out1.dat out2.dat"
     os.system(afl_cmd)
 
 def traverse_dir(path):
     subdirs = [f.path for f in os.scandir(path) if f.is_dir()]    
     for d in subdirs:
         os.chdir(d)
-        fuzz()
+        if os.path.isfile("harness.cpp"):
+            harness_fixup()
+            fuzz()
+        else:
+            traverse_dir(".")
         os.chdir("..")
 
 traverse_dir(".")
