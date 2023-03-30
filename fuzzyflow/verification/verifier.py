@@ -657,9 +657,13 @@ class TransformationVerifier:
             if status >= StatusLevel.VERBOSE:
                 print('Generateing harness')
 
-            sdfg2cpp.dump_args('c++', os.path.join(self.success_dir, 'harness'),
-                               init_args, cutout_symbol_constraints, cutout,
-                               orig_cutout, **inputs, **free_symbols_map)
+            try:
+                sdfg2cpp.dump_args('c++',
+                                   os.path.join(self.success_dir, 'harness'),
+                                   init_args, cutout_symbol_constraints, cutout,
+                                   orig_cutout, **inputs, **free_symbols_map)
+            except Exception:
+                pass
 
         return True
 
