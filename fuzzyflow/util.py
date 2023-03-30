@@ -7,6 +7,7 @@ from enum import Enum
 from functools import total_ordering
 from typing import Dict, List, Set, Tuple, Union
 import sympy as sp
+from math import floor
 
 from dace import serialize
 from dace.sdfg import SDFG, ScopeSubgraphView, SDFGState, InterstateEdge
@@ -184,7 +185,7 @@ def translate_transformation(
 
 
 def cutout_determine_symbol_constraints(
-    ct: SDFG, sdfg: SDFG, pre_constraints: Dict = None
+    ct: SDFG, sdfg: SDFG, pre_constraints: Dict = None, max_dim: int = 1024
 ) -> Dict:
     general_constraints = dict()
     if pre_constraints is not None:
@@ -277,5 +278,21 @@ def cutout_determine_symbol_constraints(
         else:
             if k in ct.free_symbols and not k in cutout_constraints:
                 cutout_constraints[k] = (v[0] + 1, v[1], 1)
+
+    # Constrain anything used as a data size to be at least 1. Additionally,
+    # make sure that the size of no data container can be greater than 1GB -
+    # assuming that each element is 8 bytes, conservatively.
+    for k, v in ct.arrays.items():
+        n_dims = len(v.shape)
+        max_dim_size = min(floor((1e9 / 8) ** (1 / n_dims)), max_dim)
+        for s in v.shape:
+            if isinstance(s, sp.Basic):
+                for sym in s.free_symbols:
+                    s = str(sym)
+                    if s in ct.free_symbols and not s in cutout_constraints:
+                        cutout_constraints[s] = (1, max_dim_size, 1)
+            else:
+                if s in ct.free_symbols and not s in cutout_constraints:
+                    cutout_constraints[s] = (1, max_dim_size, 1)
 
     return cutout_constraints
