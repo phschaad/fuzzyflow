@@ -41,6 +41,9 @@ def get_arg_type(arg, argname):
         elif (arg.dtype == np.int8):
             elemsize = 1
             elemtypec = "DACE_INT8"
+        elif (arg.dtype == np.complex128):
+            elemsize = 16
+            elemtypec = "DACE_COMPLEX128"
         else:
             raise(ValueError("Unsupported np type "+str(arg.dtype)))
     return (allocate, elems, elemsize, elemtypec)
@@ -87,6 +90,12 @@ def write_arg(arg, data_file):
         elif (arg.dtype == np.int8):
             for x in np.nditer(arg.T):
                 ba = bytearray(struct.pack("b", x.item()))
+                data_file.write(ba)
+        elif (arg.dtype == np.complex128):
+            for x in np.nditer(arg.T):
+                ba = bytearray(struct.pack("d", x.item().real))
+                data_file.write(ba)
+                ba = bytearray(struct.pack("d", x.item().imag))
                 data_file.write(ba)
         else:
             raise(ValueError("Unsupported np type "+str(arg.dtype)))
@@ -153,12 +162,16 @@ def compare_arg(arg, argname, code_file):
     print("    "+str(elemtypec) +" dacefuzz_tmp2;", file=code_file)
     print("    " + "dacefuzz_read_"+str(elemtypec)+"(&dacefuzz_tmp1, out1, 1);", file=code_file)
     print("    " + "dacefuzz_read_"+str(elemtypec)+"(&dacefuzz_tmp2, out2, 1);", file=code_file)
-    print("    " + "double dacefuzz_diff = (((double)dacefuzz_tmp1) - ((double)dacefuzz_tmp2));", file=code_file)
+    if elemtypec == "DACE_COMPLEX128":
+        print("    " + "double dacefuzz_diff_real = fabs(((double)dacefuzz_tmp1.real()) - ((double)dacefuzz_tmp2.real()));", file=code_file)
+        print("    " + "double dacefuzz_diff_imag = fabs(((double)dacefuzz_tmp1.imag()) - ((double)dacefuzz_tmp2.imag()));", file=code_file)
+        print("    " + "double dacefuzz_diff = dacefuzz_diff_real + dacefuzz_diff_imag;", file=code_file)
+    else:
+        print("    " + "double dacefuzz_diff = (((double)dacefuzz_tmp1) - ((double)dacefuzz_tmp2));", file=code_file)
     print("    " + "if (fabs(dacefuzz_diff) > 0.0001) {", file=code_file)
-    print("      " + "printf(\"The outputs differ for argument "+str(argname)+" at position %i of %i\\n\", dacefuzz_idx_i, "+str(elems)+");", file=code_file)
+    print("      " + "printf(\"The outputs differ for argument "+str(argname)+" at position %i of %i by %lf\\n\", dacefuzz_idx_i, "+str(elems)+", dacefuzz_diff);", file=code_file)
     print("      " + "*((int*) 0) = 0; //make afl happy", file=code_file)
     print("      " + "exit(EXIT_FAILURE);", file=code_file)
-    print("      " + "printf(\"%lf vs %lf\\n\", ((double)dacefuzz_tmp1), ((double)dacefuzz_tmp2));", file=code_file)
     print("    }", file=code_file)
     print("  }", file=code_file)
 
@@ -171,6 +184,7 @@ def print_helpers(code_file):
     print("int dacefuzz_read_DACE_UINT64(void* dest, FILE* datastream, size_t elems) { return fread(dest, 8, elems, datastream); }", file=code_file)
     print("int dacefuzz_read_DACE_UINT8(void* dest, FILE* datastream, size_t elems) { return fread(dest, 1, elems, datastream); }", file=code_file)
     print("int dacefuzz_read_double(void* dest, FILE* datastream, size_t elems) { return fread(dest, 8, elems, datastream); }", file=code_file)
+    print("int dacefuzz_read_DACE_COMPLEX128(void* dest, FILE* datastream, size_t elems) {int ret=0; for (size_t i=0; i<elems; i++) {double t[2];  ret+=fread(t, 16, 1, datastream); ((dace::complex128*)(dest))[i] = dace::complex128(t[0], t[1]); } return ret; }", file=code_file)
     print("int dacefuzz_read_float(void* dest, FILE* datastream, size_t elems) { return fread(dest, 4, elems, datastream); }", file=code_file)
     print("int dacefuzz_write_void(FILE* datastream, void* src, size_t elems) { printf(\"Something went wrong during codegen, we could not infer the type of some argument!\"); exit(EXIT_FAILURE); return 0;}", file=code_file)
     print("int dacefuzz_write_int(FILE* datastream, void* src, size_t elems) { return fwrite(src, 4, elems, datastream); }", file=code_file)
@@ -179,18 +193,21 @@ def print_helpers(code_file):
     print("int dacefuzz_write_DACE_UINT8(FILE* datastream, void* src, size_t elems) { return fwrite(src, 1, elems, datastream); }", file=code_file)
     print("int dacefuzz_write_double(FILE* datastream, void* src, size_t elems) { return fwrite(src, 8, elems, datastream); }", file=code_file)
     print("int dacefuzz_write_float(FILE* datastream, void* src, size_t elems) { return fwrite(src, 4, elems, datastream); }", file=code_file)
+    print("int dacefuzz_write_DACE_COMPLEX128(FILE* datastream, void* src, size_t elems) {int ret=0; for (size_t i=0; i<elems; i++) {double t[2]; t[0]=((dace::complex128*)src)[i].real(); t[1]=((dace::complex128*)(src))[i].imag(); ret += fwrite(t,16,1,datastream); } return ret; }", file=code_file)
     print("int dacefuzz_init_zeros_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }", file=code_file)
     print("int dacefuzz_init_zeros_DACE_INT64(DACE_INT64* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }", file=code_file)
     print("int dacefuzz_init_zeros_DACE_UINT64(DACE_UINT64* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }", file=code_file)
     print("int dacefuzz_init_zeros_DACE_UINT8(DACE_UINT64* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }", file=code_file)
     print("int dacefuzz_init_zeros_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }", file=code_file)
     print("int dacefuzz_init_zeros_double(double* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }", file=code_file)
+    print("int dacefuzz_init_zeros_DACE_COMPLEX128(DACE_COMPLEX128* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i] = dace::complex128(0.0, 0.0); } return elems; }\n", file=code_file)
     print("int dacefuzz_init_rand_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=rand(); } return elems; }", file=code_file)
     print("int dacefuzz_init_rand_DACE_INT64(DACE_INT64 * dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=rand(); } return elems; }", file=code_file)
     print("int dacefuzz_init_rand_DACE_UINT64(DACE_UINT64 * dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=rand(); } return elems; }", file=code_file)
     print("int dacefuzz_init_rand_DACE_UINT8(DACE_UINT8 * dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= (rand() % 256); } return elems; }", file=code_file)
     print("int dacefuzz_init_rand_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= ((float)rand() / (float) RAND_MAX)*42.0; } return elems; }", file=code_file)
     print("int dacefuzz_init_rand_double(double* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= ((double)rand() / (double) RAND_MAX)*42.0; } return elems; }\n", file=code_file)
+    print("int dacefuzz_init_rand_DACE_COMPLEX128(DACE_COMPLEX128* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i] = dace::complex128((double) rand() / RAND_MAX, (double) rand() / RAND_MAX); } return elems; }\n", file=code_file)
 
 
 
@@ -218,6 +235,7 @@ def generate_headers(code_file, sdfg1, sdfg2):
     print("#define DACE_UINT64 long long unsigned int", file=code_file)
     print("#define DACE_INT8 char", file=code_file)
     print("#define DACE_UINT8 unsigned char", file=code_file)
+    print("#define DACE_COMPLEX128 dace::complex128", file=code_file)
     print("", file=code_file)
     print("FILE* argdata;", file=code_file)
     print("", file=code_file)
