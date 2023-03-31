@@ -96,12 +96,12 @@ def main():
 
                 print(f'Verifying {pattern.__class__.__name__} on {graph_name}')
                 out_dir = os.path.join(
-                    '.testdata', prefix, 'npbench',
+                    '.testdata', 'npbench', prefix,
                     graph_name.split('.')[0], 'fails',
                     pattern.__class__.__name__ + '_' + str(i)
                 )
                 success_dir = os.path.join(
-                    '.testdata', prefix, 'npbench',
+                    '.testdata', 'npbench', prefix,
                     graph_name.split('.')[0], 'successes',
                     pattern.__class__.__name__ + '_' + str(i)
                 )
