@@ -237,9 +237,9 @@ def main():
             exit(1)
 
         # Ensure the transformation is loaded and can properly by matched
-        importlib.import_module(
-            'dace.transformation.' + xf_type + '.' + xf_name
-        )
+        #importlib.import_module(
+        #    'dace.transformation.' + xf_type + '.' + xf_name
+        #)
         matches: List = list(
             match_patterns(sdfg, getattr(base_cls, xf_name))
         )

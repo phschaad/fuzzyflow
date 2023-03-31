@@ -296,9 +296,7 @@ def dump_args(out_lang, out_file, autoinit_args, sym_constraints, sdfg1, sdfg2, 
         for arg in args:
             write_arg(arg, data_file)
         for arg in kwargs:
-            if str(arg) in autoinit_args.keys():
-                print(str(arg) + " is an autoinit arg, it will NOT be present in the generated input file!")
-            else:
+            if str(arg) not in autoinit_args.keys():
                 write_arg(kwargs[arg], data_file)
 
 

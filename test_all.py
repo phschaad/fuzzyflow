@@ -2,6 +2,7 @@ import os
 import re
 from dace.sdfg import SDFG
 from dace.transformation.optimizer import SDFGOptimizer
+import traceback
 
 import fuzzyflow as ff
 
@@ -9,72 +10,74 @@ import fuzzyflow as ff
 IGNORE_LIST = [
     'ElementWise*',
     'FPGA*',
-    'GPU*',
     'MPI*',
     'ReductionNOperation',
     'OuterProductOperation',
     'CopyToDevice',
     'LoopDetection',
-
-    'NestSDFG',
+    'StreamingComposition',
 ]
 
 GRAPH_IGNORE_LIST = [
-    'adi.sdfg',
-    'arc_distance.sdfg',
-    'atax.sdfg',
+    #'adi.sdfg',
+    #'arc_distance.sdfg',
+    #'atax.sdfg',
     'azimint_hist.sdfg',
-    'azimint_naive.sdfg',
-    'bicg.sdfg',
-    'cavity_flow.sdfg',
-    'channel_flow.sdfg',
-    'cholesky.sdfg',
-    'cholesky2.sdfg',
-    'compute.sdfg',
+    #'azimint_naive.sdfg',
+    #'bicg.sdfg',
+    #'cavity_flow.sdfg',
+    #'channel_flow.sdfg',
+    #'cholesky.sdfg',
+    #'cholesky2.sdfg',
+    #'compute.sdfg',
     'contour_integral.sdfg',
-    'conv2d_bias.sdfg',
-    'correlation.sdfg', # Done
-    'covariance.sdfg',
+    'conv2d_bias.sdfg', # Causes exceptions in pattern matching
+    #'correlation.sdfg',
+    #'covariance.sdfg',
     'crc16.sdfg',
-    'deriche.sdfg',
-    'doitgen.sdfg',
+    #'deriche.sdfg',
+    #'doitgen.sdfg',
     'durbin.sdfg',
-    'fdtd_2d.sdfg',
-    'floyd_warshall.sdfg', # Done
-    'gemm.sdfg',
-    'gemver.sdfg',
-    'gesummv.sdfg',
-    'go_fast.sdfg',
-    'gramschmidt.sdfg',
-    'hdiff.sdfg',
-    'heat_3d.sdfg', # Done
-    'jacobi_1d.sdfg',
-    'jacobi_2d.sdfg',
-    'k2mm.sdfg',
+    #'fdtd_2d.sdfg',
+    'floyd_warshall.sdfg',
+    #'gemm.sdfg',
+    #'gemver.sdfg',
+    #'gesummv.sdfg',
+    #'go_fast.sdfg',
+    #'gramschmidt.sdfg',
+    #'hdiff.sdfg',
+    #'heat_3d.sdfg',
+    #'jacobi_1d.sdfg',
+    #'jacobi_2d.sdfg',
+    #'k2mm.sdfg',
     'k3mm.sdfg',
-    'lenet.sdfg',
-    'lu.sdfg',
-    'ludcmp.sdfg',
-    'mlp.sdfg',
-    'mvt.sdfg',
-    'nbody.sdfg',
-    'nussinov.sdfg',
-    'resnet.sdfg',
-    'scattering_self_energies.sdfg',
-    'seidel_2d.sdfg',
-    'softmax.sdfg',
-    'spmv.sdfg',
-    'stockham_fft.sdfg',
-    'symm.sdfg',
+    #'lenet.sdfg',
+    #'lu.sdfg',
+    #'ludcmp.sdfg',
+    #'mlp.sdfg',
+    #'mvt.sdfg',
+    #'nbody.sdfg',
+    #'nussinov.sdfg',
+    #'resnet.sdfg',
+    'scattering_self_energies.sdfg', # Causes out of memory.
+    #'seidel_2d.sdfg',
+    #'softmax.sdfg',
+    #'spmv.sdfg',
+    #'stockham_fft.sdfg',
+    #'symm.sdfg',
     #'syr2k.sdfg',
-    'syrk.sdfg',
+    #'syrk.sdfg',
     'trisolv.sdfg',
-    'trmm.sdfg',
-    'vadv.sdfg',
+    #'trmm.sdfg',
+    #'vadv.sdfg',
 ]
 
-prefix = 'run2'
+prefix = 'run_3'
 
+
+last_pattern = None
+last_graph = None
+exception_nr = 0
 
 def main():
     ignore_regex = re.compile(
@@ -94,6 +97,9 @@ def main():
                 if ignore_regex.search(pattern.__class__.__name__):
                     continue
 
+                last_pattern = pattern
+                last_graph = graph_name
+
                 print(f'Verifying {pattern.__class__.__name__} on {graph_name}')
                 out_dir = os.path.join(
                     '.testdata', 'npbench', prefix,
@@ -106,7 +112,8 @@ def main():
                     pattern.__class__.__name__ + '_' + str(i)
                 )
                 verifier = ff.TransformationVerifier(
-                    pattern, sdfg, output_dir=out_dir, success_dir=success_dir
+                    pattern, sdfg, output_dir=out_dir, success_dir=success_dir,
+                    build_dir_base_path='buildcache/'
                 )
                 valid = verifier.verify(
                     n_samples=100, status=ff.StatusLevel.BAR_ONLY
@@ -116,7 +123,23 @@ def main():
 
                 i += 1
         except Exception as e:
+            print('-' * 80)
             print('Exception occurred!')
+            print(last_pattern)
+            print(last_graph)
+            print('-' * 80)
+            with open(
+                'exception_' + str(graph_name) + '_' +
+                str(exception_nr) + '.txt', 'w'
+            ) as f:
+                f.writelines([
+                    str(e),
+                    str(last_pattern),
+                    str(last_graph),
+                    '',
+                ])
+                traceback.print_tb(e.__traceback__, file=f)
+            exception_nr += 1
 
 
 if __name__ == '__main__':

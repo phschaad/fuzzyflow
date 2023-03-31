@@ -13,6 +13,8 @@ from struct import error as StructError
 import pickle
 import traceback
 import tempfile
+import warnings
+import sympy as sp
 
 import dace
 from dace import config
@@ -72,14 +74,15 @@ class TransformationVerifier:
         self._build_dir_base_path = build_dir_base_path
 
     def cutout(
-        self, status: StatusLevel = StatusLevel.OFF
+        self, status: StatusLevel = StatusLevel.OFF,
+        use_alibi_nodes: bool = False, reduce_input_config: bool = False
     ) -> Union[SDFG, SDFGCutout]:
         if self._cutout is None:
             if status >= StatusLevel.DEBUG:
                 print('Finding ideal cutout')
             self._cutout = SDFGCutout.from_transformation(
-                self.sdfg, self.xform, use_alibi_nodes=False,
-                reduce_input_config=False
+                self.sdfg, self.xform, use_alibi_nodes=use_alibi_nodes,
+                reduce_input_config=reduce_input_config
             )
             if status >= StatusLevel.DEBUG:
                 print('Cutout obtained')
@@ -91,7 +94,8 @@ class TransformationVerifier:
         status: StatusLevel, inputs: Optional[Dict[str, Any]] = None,
         symbol_constraints: Optional[Dict[str, Any]] = None,
         symbols: Optional[Dict[str, Any]] = None,
-        exception: Optional[Exception] = None
+        exception: Optional[Exception] = None,
+        iteration: Optional[int] = None
     ) -> None:
         if self.output_dir:
             os.makedirs(self.output_dir, exist_ok=True)
@@ -176,7 +180,8 @@ class TransformationVerifier:
         self, n_samples: int = 1, status: StatusLevel = StatusLevel.OFF,
         debug_save_path: str = None, enforce_finiteness: bool = False,
         symbol_constraints: Dict = None, data_constraints: Dict = None,
-        strict_config: bool = False
+        strict_config: bool = False, use_alibi_nodes: bool = False,
+        reduce_input_config: bool = False
     ) -> bool:
         cutout = self.cutout(status=status)
         orig_cutout = deepcopy(cutout)
@@ -405,6 +410,13 @@ class TransformationVerifier:
                             oval = orig_containers[dat]
                             nval = xformed_containers[dat]
 
+                            if isinstance(oval, sp.Basic):
+                                resample = True
+                                break
+                            if isinstance(nval, sp.Basic):
+                                resample = True
+                                break
+
                             if (enforce_finiteness and
                                 not np.isfinite(oval).all()):
                                 if status >= StatusLevel.VERBOSE:
@@ -510,8 +522,7 @@ class TransformationVerifier:
                     'potentially fuzzing externally.'
                 )
             symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
-                orig_cutout, constraints_map=cutout_symbol_constraints,
-                maxval=256
+                orig_cutout, constraints_map=cutout_symbol_constraints
             )
 
             constraints_map = None
@@ -582,7 +593,9 @@ class TransformationVerifier:
                                    init_args, cutout_symbol_constraints, cutout,
                                    orig_cutout, **inputs, **free_symbols_map)
             except Exception:
-                pass
+                with open(os.path.join(self.success_dir, 'EXCEPT'), 'w') as f:
+                    f.write('Failed to generate harness')
+                    traceback.print_exec(file=f)
 
         return True
 
@@ -591,7 +604,8 @@ class TransformationVerifier:
         self, n_samples: int = 1, status: StatusLevel = StatusLevel.OFF,
         debug_save_path: str = None, enforce_finiteness: bool = False,
         symbol_constraints: Dict = None, data_constraints: Dict = None,
-        strict_config: bool = False
+        strict_config: bool = False, minimize_input: bool = False,
+        use_alibi_nodes: bool = False
     ) -> bool:
         with tempfile.TemporaryDirectory(
             prefix='fuzzyflow_dacecache_',
@@ -613,12 +627,19 @@ class TransformationVerifier:
                 config.Config.set('debugprint', value=False)
                 config.Config.set('cache', value='name')
                 config.Config.set('default_build_folder', value=build_dir)
-                try:
-                    return self._do_verify(
-                        n_samples, status, debug_save_path, enforce_finiteness,
-                        symbol_constraints, data_constraints, strict_config
-                    )
-                except Exception as e:
-                    self._catch_failure(
-                        FailureReason.EXCEPTION, str(e), status, exception=e
-                    )
+                with warnings.catch_warnings():
+                    #warnings.simplefilter(
+                    #    'ignore'
+                    #)
+                    try:
+                        return self._do_verify(
+                            n_samples, status, debug_save_path,
+                            enforce_finiteness,
+                            symbol_constraints, data_constraints, strict_config,
+                            use_alibi_nodes=use_alibi_nodes,
+                            reduce_input_config=minimize_input
+                        )
+                    except Exception as e:
+                        self._catch_failure(
+                            FailureReason.EXCEPTION, str(e), status, exception=e
+                        )

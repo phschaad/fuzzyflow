@@ -185,7 +185,7 @@ def translate_transformation(
 
 
 def cutout_determine_symbol_constraints(
-    ct: SDFG, sdfg: SDFG, pre_constraints: Dict = None, max_dim: int = 256
+    ct: SDFG, sdfg: SDFG, pre_constraints: Dict = None, max_dim: int = 1024
 ) -> Dict:
     general_constraints = dict()
     if pre_constraints is not None:
