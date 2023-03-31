@@ -189,7 +189,7 @@ class DataSampler:
 
 
     def sample_symbols_map_for(
-        self, sdfg: SDFG, maxval: int = 128, constraints_map: Dict = None
+        self, sdfg: SDFG, maxval: int = 256, constraints_map: Dict = None
     ) -> Tuple[Dict[str, int], Dict[str, int]]:
         cutoff = 10
 

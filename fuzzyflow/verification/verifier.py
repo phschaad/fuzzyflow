@@ -3,8 +3,7 @@
 # License. For details, see the LICENSE file.
 
 from copy import deepcopy
-from collections import deque
-from typing import Dict, List, Union, Optional, Set, Any
+from typing import Dict, Union, Optional, Set, Any
 import os
 import numpy as np
 from tqdm import tqdm
@@ -13,18 +12,17 @@ import json
 from struct import error as StructError
 import pickle
 import traceback
+import tempfile
 
 import dace
-from dace import config, dtypes
+from dace import config
 from dace.codegen.compiled_sdfg import CompiledSDFG
-from dace.data import Scalar
-from dace.sdfg import SDFG, nodes as nd
+from dace.sdfg import SDFG
 from dace.sdfg.analysis.cutout import SDFGCutout
 from dace.transformation.transformation import (PatternTransformation,
                                                 SubgraphTransformation)
 from dace.symbolic import pystr_to_symbolic
 from dace.sdfg.validation import InvalidSDFGError
-from dace.codegen.instrumentation.data.data_report import InstrumentedDataReport
 
 from fuzzyflow.runner import run_subprocess_precompiled
 from fuzzyflow.util import (StatusLevel,
@@ -45,11 +43,14 @@ class FailureReason(Enum):
 
 class TransformationVerifier:
 
+    _orig_xform: Union[SubgraphTransformation, PatternTransformation] = None
     xform: Union[SubgraphTransformation, PatternTransformation] = None
     sdfg: SDFG = None
     sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM
     output_dir: Optional[str] = None
     success_dir: Optional[str] = None
+
+    _build_dir_base_path: str = '/mnt/ramdisk'
 
     _cutout: Union[SDFG, SDFGCutout] = None
     _original_cutout: Union[SDFG, SDFGCutout] = None
@@ -59,13 +60,16 @@ class TransformationVerifier:
         xform: Union[SubgraphTransformation, PatternTransformation],
         sdfg: SDFG,
         sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM,
-        output_dir: Optional[str] = None, success_dir: Optional[str] = None
+        output_dir: Optional[str] = None, success_dir: Optional[str] = None,
+        build_dir_base_path: str = '/mnt/ramdisk'
     ):
         self.xform = xform
+        self._orig_xform = deepcopy(xform)
         self.sdfg = sdfg
         self.sampling_strategy = sampling_strategy
         self.output_dir = output_dir
         self.success_dir = success_dir
+        self._build_dir_base_path = build_dir_base_path
 
     def cutout(
         self, status: StatusLevel = StatusLevel.OFF
@@ -80,22 +84,6 @@ class TransformationVerifier:
             if status >= StatusLevel.DEBUG:
                 print('Cutout obtained')
         return self._cutout
-
-
-    def _data_report_get_latest_version(
-        self, report: InstrumentedDataReport, item: str
-    ) -> dace.data.ArrayLike:
-        if report is None:
-            return None
-        filenames = report.files[item]
-        desc = report.sdfg.arrays[item]
-        dtype: dtypes.typeclass = desc.dtype
-        npdtype = dtype.as_numpy_dtype()
-
-        file = deque(iter(filenames), maxlen=1).pop()
-        nparr, view = report._read_array_file(file, npdtype)
-        report.loaded_values[item, -1] = nparr
-        return view
 
 
     def _catch_failure(
@@ -125,13 +113,7 @@ class TransformationVerifier:
             if status >= StatusLevel.VERBOSE:
                 print('Saving cutouts')
 
-            noinstr = dace.DataInstrumentationType.No_Instrumentation
             if reason == FailureReason.EXCEPTION:
-                for sd in self.sdfg.all_sdfgs_recursive():
-                    for s in sd.states():
-                        s.symbol_instrument = noinstr
-                        for dn in s.data_nodes():
-                            dn.instrument = noinstr
                 self.sdfg.save(os.path.join(self.output_dir, 'orig.sdfg'))
 
                 if status >= StatusLevel.VERBOSE:
@@ -142,16 +124,6 @@ class TransformationVerifier:
                     json.dump(self.xform.to_json(), f, indent=4)
                 return
 
-            for sd in self._cutout.all_sdfgs_recursive():
-                for s in sd.states():
-                    s.symbol_instrument = noinstr
-                    for dn in s.data_nodes():
-                        dn.instrument = noinstr
-            for sd in self._original_cutout.all_sdfgs_recursive():
-                for s in sd.states():
-                    s.symbol_instrument = noinstr
-                    for dn in s.data_nodes():
-                        dn.instrument = noinstr
             self._cutout.save(os.path.join(self.output_dir, 'post.sdfg'))
             self._original_cutout.save(
                 os.path.join(self.output_dir, 'pre.sdfg')
@@ -244,25 +216,8 @@ class TransformationVerifier:
                             'the output configuration!'
                         )
                         cutout.add_datadesc(name, orig_cutout.arrays[name])
-                    if not cutout.arrays[name].transient:
-                        cutout.arrays[name].transient = True
-
-        # Instrumentation.
-        to_save = set()
-        if isinstance(cutout, SDFGCutout):
-            to_save = cutout.output_config
-        else:
-            for name, desc in cutout.arrays.items():
-                if not desc.transient:
-                    to_save.add(name)
-        for s in cutout.states():
-            for dn in s.data_nodes():
-                if dn.data in to_save:
-                    dn.instrument = dtypes.DataInstrumentationType.Save
-        for s in orig_cutout.states():
-            for dn in s.data_nodes():
-                if dn.data in to_save:
-                    dn.instrument = dtypes.DataInstrumentationType.Save
+                    if cutout.arrays[name].transient:
+                        cutout.arrays[name].transient = False
 
         if debug_save_path is not None:
             self._original_cutout.save(debug_save_path + '_orig.sdfg')
@@ -329,7 +284,7 @@ class TransformationVerifier:
                     bar.write('Sampling symbols')
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                     orig_cutout, constraints_map=cutout_symbol_constraints,
-                    maxval=1024
+                    maxval=256
                 )
 
                 constraints_map = None
@@ -407,8 +362,6 @@ class TransformationVerifier:
                     bar.write(
                         'Collecting pre-transformation cutout data reports'
                     )
-                orig_drep: InstrumentedDataReport = None
-                orig_drep = orig_cutout.get_instrumented_data()
 
                 xformed_containers = dict()
                 for k in inputs.keys():
@@ -430,8 +383,6 @@ class TransformationVerifier:
                     bar.write(
                         'Collecting post-transformation cutout data reports'
                     )
-                xformed_drep: InstrumentedDataReport = None
-                xformed_drep = cutout.get_instrumented_data()
 
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Comparing results')
@@ -451,30 +402,8 @@ class TransformationVerifier:
                     resample = False
                     for dat in output_config:
                         try:
-                            oval = self._data_report_get_latest_version(
-                                orig_drep, dat
-                            )
-
-                            if (xformed_drep is not None and
-                                dat in xformed_drep.files):
-                                nval = self._data_report_get_latest_version(
-                                    xformed_drep, dat
-                                )
-                            else:
-                                if dat not in inputs:
-                                    if status >= StatusLevel.VERBOSE:
-                                        bar.write('System state mismatch!')
-                                    self._catch_failure(
-                                        FailureReason.SYSTEM_STATE_MISMATCH,
-                                        f'Missing input ${dat}', status,
-                                        inputs_save, cutout_symbol_constraints,
-                                        free_symbols_map
-                                    )
-                                    return False
-                                if isinstance(cutout.arrays[dat], Scalar):
-                                    nval = [inputs[dat]]
-                                else:
-                                    nval = inputs[dat]
+                            oval = orig_containers[dat]
+                            nval = xformed_containers[dat]
 
                             if (enforce_finiteness and
                                 not np.isfinite(oval).all()):
@@ -582,7 +511,7 @@ class TransformationVerifier:
                 )
             symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                 orig_cutout, constraints_map=cutout_symbol_constraints,
-                maxval=1024
+                maxval=256
             )
 
             constraints_map = None
@@ -622,17 +551,6 @@ class TransformationVerifier:
             if status >= StatusLevel.VERBOSE:
                 print('Saving cutouts')
 
-            noinstr = dace.DataInstrumentationType.No_Instrumentation
-            for sd in cutout.all_sdfgs_recursive():
-                for s in sd.states():
-                    s.symbol_instrument = noinstr
-                    for dn in s.data_nodes():
-                        dn.instrument = noinstr
-            for sd in orig_cutout.all_sdfgs_recursive():
-                for s in sd.states():
-                    s.symbol_instrument = noinstr
-                    for dn in s.data_nodes():
-                        dn.instrument = noinstr
             cutout.save(os.path.join(self.success_dir, 'post.sdfg'))
             orig_cutout.save(os.path.join(self.success_dir, 'pre.sdfg'))
 
@@ -675,24 +593,32 @@ class TransformationVerifier:
         symbol_constraints: Dict = None, data_constraints: Dict = None,
         strict_config: bool = False
     ) -> bool:
-        with config.temporary_config():
-            config.Config.set(
-                'compiler',
-                'cpu',
-                'args',
-                value='-std=c++14 -fPIC -Wall -Wextra -O2 ' +
-                    '-Wno-unused-parameter -Wno-unused-label'
-            )
-            config.Config.set('compiler', 'allow_view_arguments', value=True)
-            config.Config.set('profiling', value=False)
-            config.Config.set('debugprint', value=False)
-            config.Config.set('cache', value='name')
-            try:
-                return self._do_verify(
-                    n_samples, status, debug_save_path, enforce_finiteness,
-                    symbol_constraints, data_constraints, strict_config
+        with tempfile.TemporaryDirectory(
+            prefix='fuzzyflow_dacecache_',
+            suffix='_' + self.xform.__class__.__name__,
+            dir=self._build_dir_base_path,
+        ) as build_dir:
+            with config.temporary_config():
+                config.Config.set(
+                    'compiler',
+                    'cpu',
+                    'args',
+                    value='-std=c++14 -fPIC -Wall -Wextra -O2 ' +
+                        '-Wno-unused-parameter -Wno-unused-label'
                 )
-            except Exception as e:
-                self._catch_failure(
-                    FailureReason.EXCEPTION, str(e), status, exception=e
+                config.Config.set(
+                    'compiler', 'allow_view_arguments', value=True
                 )
+                config.Config.set('profiling', value=False)
+                config.Config.set('debugprint', value=False)
+                config.Config.set('cache', value='name')
+                config.Config.set('default_build_folder', value=build_dir)
+                try:
+                    return self._do_verify(
+                        n_samples, status, debug_save_path, enforce_finiteness,
+                        symbol_constraints, data_constraints, strict_config
+                    )
+                except Exception as e:
+                    self._catch_failure(
+                        FailureReason.EXCEPTION, str(e), status, exception=e
+                    )

@@ -6,8 +6,8 @@ import argparse
 import json
 import os
 import warnings
-import shutil
 from typing import List
+import importlib
 
 from dace import serialize
 from dace.sdfg import SDFG
@@ -236,6 +236,10 @@ def main():
             print('Transformation type', xf_type, 'has no member', xf_name)
             exit(1)
 
+        # Ensure the transformation is loaded and can properly by matched
+        importlib.import_module(
+            'dace.transformation.' + xf_type + '.' + xf_name
+        )
         matches: List = list(
             match_patterns(sdfg, getattr(base_cls, xf_name))
         )
@@ -272,7 +276,6 @@ def main():
                 match, sdfg, args.sampling_strategy, instance_out_path,
                 instance_success_path
             )
-            #try:
             valid = verifier.verify(
                 args.runs, status=StatusLevel.DEBUG,
                 enforce_finiteness=True,
@@ -285,12 +288,6 @@ def main():
                 file_contents['invalid_indices'].append(i)
             else:
                 print('Transformation is valid')
-            #except Exception as e:
-            #    failed.add(i)
-            #    print('Failed to validate with exception')
-            #    print(e)
-            for folder in os.listdir('.dacecache'):
-                shutil.rmtree(os.path.join('.dacecache', folder))
             i += 1
 
             file_contents['index'] = i

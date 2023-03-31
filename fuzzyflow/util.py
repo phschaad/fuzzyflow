@@ -10,7 +10,7 @@ import sympy as sp
 from math import floor
 
 from dace import serialize
-from dace.sdfg import SDFG, ScopeSubgraphView, SDFGState, InterstateEdge
+from dace.sdfg import SDFG, ScopeSubgraphView, SDFGState
 from dace.sdfg import nodes as nd
 from dace.sdfg.state import StateSubgraphView
 from dace.memlet import Memlet
@@ -185,7 +185,7 @@ def translate_transformation(
 
 
 def cutout_determine_symbol_constraints(
-    ct: SDFG, sdfg: SDFG, pre_constraints: Dict = None, max_dim: int = 1024
+    ct: SDFG, sdfg: SDFG, pre_constraints: Dict = None, max_dim: int = 256
 ) -> Dict:
     general_constraints = dict()
     if pre_constraints is not None:
