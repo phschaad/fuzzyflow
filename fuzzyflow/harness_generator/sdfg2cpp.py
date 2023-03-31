@@ -152,12 +152,15 @@ def print_helpers(code_file):
 
 
 def generate_call(out_file, sdfg, args, kwargs):
+  print("  "+sdfg.name+"Handle_t "+sdfg.name+"_handle = __dace_init_"+sdfg.name+"("+sdfg.init_signature(for_call=True)+");", file=out_file)
   # we have all the "how to call an sdfg" relevant code in CompiledSDFG, not in SDFG itself. So we approximate it here, yay
   print("  __program_"+sdfg.name+"(", file=out_file, end="")
-  print("NULL, ", file=out_file, end="")
+  print(sdfg.name+"_handle , ", file=out_file, end="")
   args = sdfg.arglist()
   print(", ".join(args), file=out_file, end="")
   print(");", file=out_file)
+  print("  __dace_exit_"+sdfg.name+"("+sdfg.name+"_handle);", file=out_file)
+  
 
 
 def generate_headers(code_file, sdfg1, sdfg2):

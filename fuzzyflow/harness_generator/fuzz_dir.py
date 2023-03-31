@@ -37,11 +37,13 @@ def fuzz():
     inc_pre = "-I.dacecache/"+sdfg_pre.name+"/include/"
     inc_post = "-I.dacecache/"+sdfg_post.name+"/include/"
     inc_dace = "-I"+DACE_PATH+"dace/runtime/include/"
-    flags = "-O3 -fopenmp"
+    inc_cuda = "-I/usr/local/cuda/include"
+    libs_cuda = "-L/usr/local/cuda/lib64/ -lcudart -L.dacecache/"+sdfg_post.name+"/build/ -l"+sdfg_post.name+" -Wl,-rpath="+os.getcwd()+"/.dacecache/"+sdfg_post.name+"/build/"
+    flags = "-O3 -fopenmp -DWITH_CUDA"
 
     # first compile using gcc, just make sure it works
     compiler = "g++"
-    compile_cmd = " ".join([compiler, flags, "harness.cpp", src_pre, src_post, inc_pre, inc_post, inc_dace, "-o", "harness"])
+    compile_cmd = " ".join([compiler, flags, "harness.cpp", src_pre, src_post, inc_pre, inc_post, inc_dace, inc_cuda, libs_cuda, "-o", "harness"])
     print(compile_cmd)
     ret  = os.system(compile_cmd)
     if ret != 0:
@@ -50,7 +52,7 @@ def fuzz():
 
     # now lets use afl
     compiler = AFL_PATH+"afl-g++-fast"
-    compile_cmd = " ".join([compiler, flags, "harness.cpp", src_pre, src_post, inc_pre, inc_post, inc_dace, "-o", "harness"])
+    compile_cmd = " ".join([compiler, flags, "harness.cpp", src_pre, src_post, inc_pre, inc_post, inc_dace, inc_cuda, libs_cuda, "-o", "harness"])
     print(compile_cmd)
     os.system(compile_cmd)
     os.system("rm -rf afl_seeds afl_finds")
