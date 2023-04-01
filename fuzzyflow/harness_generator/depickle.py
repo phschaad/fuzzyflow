@@ -20,6 +20,8 @@ with open(path_prefix + 'constraints', 'rb') as f:
 with open(path_prefix + 'symbols', 'rb') as f:
     symbols = pickle.load(f)
 
+print('Inputs:')
+
 init_args = {}
 for k in inputs.keys():
     init_args[k] = 'rand'

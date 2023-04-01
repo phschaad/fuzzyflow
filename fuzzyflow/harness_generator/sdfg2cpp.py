@@ -29,6 +29,21 @@ def get_arg_type(arg, argname):
         elif (arg.dtype == np.double):
             elemsize = 8
             elemtypec = "double"
+        elif (arg.dtype == np.int64):
+            elemsize = 8
+            elemtypec = "DACE_INT64"
+        elif (arg.dtype == np.uint64):
+            elemsize = 8
+            elemtypec = "DACE_UINT64"
+        elif (arg.dtype == np.uint8):
+            elemsize = 1
+            elemtypec = "DACE_UINT8"
+        elif (arg.dtype == np.int8):
+            elemsize = 1
+            elemtypec = "DACE_INT8"
+        elif (arg.dtype == np.complex128):
+            elemsize = 16
+            elemtypec = "DACE_COMPLEX128"
         else:
             raise(ValueError("Unsupported np type "+str(arg.dtype)))
     return (allocate, elems, elemsize, elemtypec)
@@ -60,6 +75,28 @@ def write_arg(arg, data_file):
             for x in np.nditer(arg.T):
                 ba = bytearray(struct.pack("d", x.item()))
                 data_file.write(ba)
+        elif (arg.dtype == np.uint64):
+            for x in np.nditer(arg.T):
+                ba = bytearray(struct.pack("Q", x.item()))
+                data_file.write(ba)
+        elif (arg.dtype == np.int64):
+            for x in np.nditer(arg.T):
+                ba = bytearray(struct.pack("q", x.item()))
+                data_file.write(ba)
+        elif (arg.dtype == np.uint8):
+            for x in np.nditer(arg.T):
+                ba = bytearray(struct.pack("B", x.item()))
+                data_file.write(ba)
+        elif (arg.dtype == np.int8):
+            for x in np.nditer(arg.T):
+                ba = bytearray(struct.pack("b", x.item()))
+                data_file.write(ba)
+        elif (arg.dtype == np.complex128):
+            for x in np.nditer(arg.T):
+                ba = bytearray(struct.pack("d", x.item().real))
+                data_file.write(ba)
+                ba = bytearray(struct.pack("d", x.item().imag))
+                data_file.write(ba)
         else:
             raise(ValueError("Unsupported np type "+str(arg.dtype)))
     else:
@@ -78,7 +115,14 @@ def read_arg(arg, argname, code_file):
     if not allocate:
         if elemtypec == "int":
             print("  printf(\"%s = %i\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
-            print("  if ("+str(arg)+" * 10 < "+str(argname)+") {printf(\"Symbol value increased by more then 10x, this will likely overflow, bail out.\\n\"); exit(EXIT_FAILURE);}", file=code_file)
+        elif elemtypec == "DACE_INT64":
+            print("  printf(\"%s = %lli\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
+        elif elemtypec == "DACE_UINT64":
+            print("  printf(\"%s = %llu\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
+        elif elemtypec == "DACE_UINT8":
+            print("  printf(\"%s = %u\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
+        elif elemtypec == "DACE_INT8":
+            print("  printf(\"%s = %i\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
         elif elemtypec == "double":
             print("  printf(\"%s = %lf\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
 
@@ -90,10 +134,6 @@ def autogen_arg(arg, argname, initializer, code_file):
     else:
         makeptr="&"
     print("  " + "dacefuzz_init_"+str(initializer)+"_"+str(elemtypec)+"( "+str(makeptr)+str(argname)+", "+str(elems) +");", file=code_file)
-    if not allocate:
-        if elemtypec == "int":
-            print("  printf(\"%s = %i\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
-            print("  if ("+str(arg)+" * 10 < "+str(argname)+") {printf(\"Symbol value increased by more then 10x, this will likely overflow, bail out.\\n\"); exit(EXIT_FAILURE);}", file=code_file)
 
 
 def alloc_arg(arg, argname, code_file):
@@ -122,12 +162,16 @@ def compare_arg(arg, argname, code_file):
     print("    "+str(elemtypec) +" dacefuzz_tmp2;", file=code_file)
     print("    " + "dacefuzz_read_"+str(elemtypec)+"(&dacefuzz_tmp1, out1, 1);", file=code_file)
     print("    " + "dacefuzz_read_"+str(elemtypec)+"(&dacefuzz_tmp2, out2, 1);", file=code_file)
-    print("    " + "double dacefuzz_diff = (((double)dacefuzz_tmp1) - ((double)dacefuzz_tmp2));", file=code_file)
+    if elemtypec == "DACE_COMPLEX128":
+        print("    " + "double dacefuzz_diff_real = fabs(((double)dacefuzz_tmp1.real()) - ((double)dacefuzz_tmp2.real()));", file=code_file)
+        print("    " + "double dacefuzz_diff_imag = fabs(((double)dacefuzz_tmp1.imag()) - ((double)dacefuzz_tmp2.imag()));", file=code_file)
+        print("    " + "double dacefuzz_diff = dacefuzz_diff_real + dacefuzz_diff_imag;", file=code_file)
+    else:
+        print("    " + "double dacefuzz_diff = (((double)dacefuzz_tmp1) - ((double)dacefuzz_tmp2));", file=code_file)
     print("    " + "if (fabs(dacefuzz_diff) > 0.0001) {", file=code_file)
-    print("      " + "printf(\"The outputs differ for argument "+str(argname)+" at position %i of %i\\n\", dacefuzz_idx_i, "+str(elems)+");", file=code_file)
+    print("      " + "printf(\"The outputs differ for argument "+str(argname)+" at position %i of %i by %lf\\n\", dacefuzz_idx_i, "+str(elems)+", dacefuzz_diff);", file=code_file)
     print("      " + "*((int*) 0) = 0; //make afl happy", file=code_file)
     print("      " + "exit(EXIT_FAILURE);", file=code_file)
-    print("      " + "printf(\"%lf vs %lf\\n\", ((double)dacefuzz_tmp1), ((double)dacefuzz_tmp2));", file=code_file)
     print("    }", file=code_file)
     print("  }", file=code_file)
 
@@ -136,28 +180,46 @@ def print_helpers(code_file):
     print("/* helper functions we use below */", file=code_file)
     print("int dacefuzz_read_void(void* dest, FILE* datastream, size_t elems) { printf(\"Something went wrong during codegen, we could not infer the type of some argument!\"); exit(EXIT_FAILURE); return 0;}", file=code_file)
     print("int dacefuzz_read_int(void* dest, FILE* datastream, size_t elems) { return fread(dest, 4, elems, datastream); }", file=code_file)
+    print("int dacefuzz_read_DACE_INT64(void* dest, FILE* datastream, size_t elems) { return fread(dest, 8, elems, datastream); }", file=code_file)
+    print("int dacefuzz_read_DACE_UINT64(void* dest, FILE* datastream, size_t elems) { return fread(dest, 8, elems, datastream); }", file=code_file)
+    print("int dacefuzz_read_DACE_UINT8(void* dest, FILE* datastream, size_t elems) { return fread(dest, 1, elems, datastream); }", file=code_file)
     print("int dacefuzz_read_double(void* dest, FILE* datastream, size_t elems) { return fread(dest, 8, elems, datastream); }", file=code_file)
+    print("int dacefuzz_read_DACE_COMPLEX128(void* dest, FILE* datastream, size_t elems) {int ret=0; for (size_t i=0; i<elems; i++) {double t[2];  ret+=fread(t, 16, 1, datastream); ((dace::complex128*)(dest))[i] = dace::complex128(t[0], t[1]); } return ret; }", file=code_file)
     print("int dacefuzz_read_float(void* dest, FILE* datastream, size_t elems) { return fread(dest, 4, elems, datastream); }", file=code_file)
     print("int dacefuzz_write_void(FILE* datastream, void* src, size_t elems) { printf(\"Something went wrong during codegen, we could not infer the type of some argument!\"); exit(EXIT_FAILURE); return 0;}", file=code_file)
     print("int dacefuzz_write_int(FILE* datastream, void* src, size_t elems) { return fwrite(src, 4, elems, datastream); }", file=code_file)
+    print("int dacefuzz_write_DACE_INT64(FILE* datastream, void* src, size_t elems) { return fwrite(src, 8, elems, datastream); }", file=code_file)
+    print("int dacefuzz_write_DACE_UINT64(FILE* datastream, void* src, size_t elems) { return fwrite(src, 8, elems, datastream); }", file=code_file)
+    print("int dacefuzz_write_DACE_UINT8(FILE* datastream, void* src, size_t elems) { return fwrite(src, 1, elems, datastream); }", file=code_file)
     print("int dacefuzz_write_double(FILE* datastream, void* src, size_t elems) { return fwrite(src, 8, elems, datastream); }", file=code_file)
     print("int dacefuzz_write_float(FILE* datastream, void* src, size_t elems) { return fwrite(src, 4, elems, datastream); }", file=code_file)
+    print("int dacefuzz_write_DACE_COMPLEX128(FILE* datastream, void* src, size_t elems) {int ret=0; for (size_t i=0; i<elems; i++) {double t[2]; t[0]=((dace::complex128*)src)[i].real(); t[1]=((dace::complex128*)(src))[i].imag(); ret += fwrite(t,16,1,datastream); } return ret; }", file=code_file)
     print("int dacefuzz_init_zeros_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }", file=code_file)
+    print("int dacefuzz_init_zeros_DACE_INT64(DACE_INT64* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }", file=code_file)
+    print("int dacefuzz_init_zeros_DACE_UINT64(DACE_UINT64* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }", file=code_file)
+    print("int dacefuzz_init_zeros_DACE_UINT8(DACE_UINT64* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0; } return elems; }", file=code_file)
     print("int dacefuzz_init_zeros_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }", file=code_file)
     print("int dacefuzz_init_zeros_double(double* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=0.0; } return elems; }", file=code_file)
+    print("int dacefuzz_init_zeros_DACE_COMPLEX128(DACE_COMPLEX128* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i] = dace::complex128(0.0, 0.0); } return elems; }\n", file=code_file)
     print("int dacefuzz_init_rand_int(int* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=rand(); } return elems; }", file=code_file)
+    print("int dacefuzz_init_rand_DACE_INT64(DACE_INT64 * dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=rand(); } return elems; }", file=code_file)
+    print("int dacefuzz_init_rand_DACE_UINT64(DACE_UINT64 * dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]=rand(); } return elems; }", file=code_file)
+    print("int dacefuzz_init_rand_DACE_UINT8(DACE_UINT8 * dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= (rand() % 256); } return elems; }", file=code_file)
     print("int dacefuzz_init_rand_float(float* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= ((float)rand() / (float) RAND_MAX)*42.0; } return elems; }", file=code_file)
     print("int dacefuzz_init_rand_double(double* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i]= ((double)rand() / (double) RAND_MAX)*42.0; } return elems; }\n", file=code_file)
+    print("int dacefuzz_init_rand_DACE_COMPLEX128(DACE_COMPLEX128* dst, size_t elems) { for (size_t i=0; i<elems; i++) { dst[i] = dace::complex128((double) rand() / RAND_MAX, (double) rand() / RAND_MAX); } return elems; }\n", file=code_file)
 
 
 
 def generate_call(out_file, sdfg, args, kwargs):
+  print("  "+sdfg.name+"Handle_t "+sdfg.name+"_handle = __dace_init_"+sdfg.name+"("+sdfg.init_signature(for_call=True)+");", file=out_file)
   # we have all the "how to call an sdfg" relevant code in CompiledSDFG, not in SDFG itself. So we approximate it here, yay
   print("  __program_"+sdfg.name+"(", file=out_file, end="")
-  print("NULL, ", file=out_file, end="")
-  args = sdfg.arglist()
+  args = [sdfg.name+"_handle"] + list(sdfg.arglist())
   print(", ".join(args), file=out_file, end="")
   print(");", file=out_file)
+  print("  __dace_exit_"+sdfg.name+"("+sdfg.name+"_handle);", file=out_file)
+  
 
 
 def generate_headers(code_file, sdfg1, sdfg2):
@@ -167,6 +229,13 @@ def generate_headers(code_file, sdfg1, sdfg2):
     print("#include \""+sdfg1.name+".h\"", file=code_file)
     if sdfg2 is not None:
         print("#include \""+sdfg2.name+".h\"", file=code_file)
+    print("", file=code_file)
+    print("// DaCe make some assumptions on datatype sizes during codegen that might not be true - this is how we conform to its imaginary world", file=code_file)
+    print("#define DACE_INT64 long long int", file=code_file)
+    print("#define DACE_UINT64 long long unsigned int", file=code_file)
+    print("#define DACE_INT8 char", file=code_file)
+    print("#define DACE_UINT8 unsigned char", file=code_file)
+    print("#define DACE_COMPLEX128 dace::complex128", file=code_file)
     print("", file=code_file)
     print("FILE* argdata;", file=code_file)
     print("", file=code_file)
@@ -213,12 +282,9 @@ def generate_validators(code_file, allocs, sym_constraints, sdfg, args, kwargs):
             for alloc in allocs:
                 (name, size, elemsize, typec, allocated) = alloc
                 if str(name) == str(arg):
-                    print("  if ("+str(size)+"*"+str(elemsize) + " < (" + str(dt.total_size) + ")*"+str(elemsize)+") { //check if "+str(arg)+" has correct size (lhs=allocated size, rhs=symbolic size)", file=code_file)
-                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+str(dt.total_size)+"=%i MB) - resizing\\n\", ("+str(dt.total_size)+"*"+str(elemsize)+")/1000000);", file=code_file)
-                    print("    if ("+str(dt.total_size)+" == 0) {printf(\"Current symbols lead to a null allocation - bail out.\\n\"); return 0;}", file=code_file)
-                    print("    if ("+str(dt.total_size)+" < 0) {printf(\"Current symbols lead to negative allocation - bail out.\\n\"); return 0;}", file=code_file)
-                    print("    if ("+str(dt.total_size)+" > 100000000) {printf(\"Current symbols lead to a huge allocation - bail out.\\n\"); return 0;}", file=code_file)
-                    print("    "+str(name)+ " = ("+str(typec)+"*) realloc("+str(name)+", (" + str(dt.total_size) + ")*"+str(elemsize)+");", file=code_file)
+                    print("  if ("+str(size)+"*"+str(elemsize) + " < (" + symstr(dt.total_size) + ")*"+str(elemsize)+") { //check if "+str(arg)+" has correct size (lhs=allocated size, rhs=symbolic size)", file=code_file)
+                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+symstr(dt.total_size)+"=%i MB) - resizing\\n\", ("+symstr(dt.total_size)+"*"+str(elemsize)+")/1000000);", file=code_file)
+                    print("    "+str(name)+ " = ("+str(typec)+"*) realloc("+str(name)+", (" + symstr(dt.total_size) + ")*"+str(elemsize)+");", file=code_file)
                     print("    assert("+str(name)+" != NULL);", file=code_file)
                     # here we could also reallocate to be able to continue - but then the data in the new region is undefined
                     print("  }", file=code_file)
@@ -319,6 +385,16 @@ def read_back_arg(arg, argname, data_file):
                 data = data_file.read(elemsize)
                 value = struct.unpack('i', data)[0]
                 arg.flat[i] = value
+            elif (arg.dtype == np.int64):
+                elemsize = 8
+                data = data_file.read(elemsize)
+                value = struct.unpack('q', data)[0]
+                arg.flat[i] = value
+            elif (arg.dtype == np.uint64):
+                elemsize = 8
+                data = data_file.read(elemsize)
+                value = struct.unpack('Q', data)[0]
+                arg.flat[i] = value
             elif (arg.dtype == np.float32):
                 elemsize = 4
                 data = data_file.read(elemsize)
@@ -329,6 +405,7 @@ def read_back_arg(arg, argname, data_file):
                 data = data_file.read(elemsize)
                 value = struct.unpack('d', data)[0]
                 arg.flat[i] = value
+
             else:
                 raise(ValueError("Unsupported np type "+str(arg.dtype)))
     else:
