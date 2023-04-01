@@ -115,9 +115,10 @@ def main():
                     pattern, sdfg, output_dir=out_dir, success_dir=success_dir,
                     build_dir_base_path='buildcache/'
                 )
-                valid = verifier.verify(
+                valid, dt = verifier.verify(
                     n_samples=100, status=ff.StatusLevel.BAR_ONLY
                 )
+                print('Valid:', valid, 'Time:', dt)
                 if not valid:
                     print('Instance invalid!')
 

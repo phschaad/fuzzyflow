@@ -3,7 +3,7 @@
 # License. For details, see the LICENSE file.
 
 from copy import deepcopy
-from typing import Dict, Union, Optional, Set, Any
+from typing import Dict, Union, Optional, Set, Any, Tuple, List
 import os
 import numpy as np
 from tqdm import tqdm
@@ -15,6 +15,7 @@ import traceback
 import tempfile
 import warnings
 import sympy as sp
+import time
 
 import dace
 from dace import config
@@ -51,6 +52,16 @@ class TransformationVerifier:
     sampling_strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM
     output_dir: Optional[str] = None
     success_dir: Optional[str] = None
+
+    _time_measurements: Dict[str, List[int]] = {
+        'cutout': [],
+        'transformation_apply': [],
+        'compiling': [],
+        'constraints': [],
+        'sampling': [],
+        'running': [],
+        'comparing': [],
+    }
 
     _build_dir_base_path: str = '/mnt/ramdisk'
 
@@ -183,16 +194,22 @@ class TransformationVerifier:
         strict_config: bool = False, use_alibi_nodes: bool = False,
         reduce_input_config: bool = False
     ) -> bool:
+        t0 = time.perf_counter_ns()
         cutout = self.cutout(
             status=status, use_alibi_nodes=use_alibi_nodes,
             reduce_input_config=reduce_input_config
         )
+        self._time_measurements['cutout'].append(time.perf_counter_ns() - t0)
         orig_cutout = deepcopy(cutout)
         self._original_cutout = orig_cutout
         if status >= StatusLevel.DEBUG:
             print('Applying transformation')
         try:
+            t0 = time.perf_counter_ns()
             apply_transformation(cutout, self.xform)
+            self._time_measurements['transformation_apply'].append(
+                time.perf_counter_ns() - t0
+            )
         except InvalidSDFGError as e:
             self._catch_failure(
                 FailureReason.FAILED_VALIDATE, str(e), status, exception=e
@@ -231,6 +248,7 @@ class TransformationVerifier:
             self._original_cutout.save(debug_save_path + '_orig.sdfg')
             cutout.save(debug_save_path + '_xformed.sdfg')
 
+        t0 = time.perf_counter_ns()
         if status >= StatusLevel.DEBUG:
             print('Compiling pre-transformation cutout')
         prog_orig: CompiledSDFG = None
@@ -262,6 +280,7 @@ class TransformationVerifier:
                 'Verifying transformation over', n_samples,
                 'sampling run' + ('s' if n_samples > 1 else '')
             )
+        self._time_measurements['compiling'].append(time.perf_counter_ns() - t0)
 
         seed = 12121
         sampler = DataSampler(self.sampling_strategy, seed)
@@ -276,8 +295,12 @@ class TransformationVerifier:
                 ) for k, (lval, hval, sval) in symbol_constraints.items()
             }
 
+        t0 = time.perf_counter_ns()
         cutout_symbol_constraints = cutout_determine_symbol_constraints(
             cutout, self.sdfg, pre_constraints=general_constraints
+        )
+        self._time_measurements['constraints'].append(
+            time.perf_counter_ns() - t0
         )
 
         with tqdm(total=n_samples, disable=(status == StatusLevel.OFF)) as bar:
@@ -290,6 +313,7 @@ class TransformationVerifier:
             while i < n_samples:
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Sampling symbols')
+                t0 = time.perf_counter_ns()
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                     orig_cutout, constraints_map=cutout_symbol_constraints,
                     maxval=256
@@ -351,7 +375,11 @@ class TransformationVerifier:
                 out_xformed = sampler.generate_output_containers(
                     cutout, output_config, new_in_config, symbols_map
                 )
+                self._time_measurements['sampling'].append(
+                    time.perf_counter_ns() - t0
+                )
 
+                t0 = time.perf_counter_ns()
                 orig_containers = dict()
                 for k in inputs.keys():
                     if not k in orig_containers:
@@ -391,7 +419,11 @@ class TransformationVerifier:
                     bar.write(
                         'Collecting post-transformation cutout data reports'
                     )
+                self._time_measurements['running'].append(
+                    time.perf_counter_ns() - t0
+                )
 
+                t0 = time.perf_counter_ns()
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Comparing results')
                 if ((ret_orig != 0 and ret_xformed == 0) or
@@ -404,6 +436,9 @@ class TransformationVerifier:
                         f' exit code (${ret_orig})',
                         status, inputs_save, cutout_symbol_constraints,
                         free_symbols_map
+                    )
+                    self._time_measurements['comparing'].append(
+                        time.perf_counter_ns() - t0
                     )
                     return False
                 elif ret_orig == 0 and ret_xformed == 0:
@@ -437,6 +472,9 @@ class TransformationVerifier:
                                         cutout_symbol_constraints,
                                         free_symbols_map
                                     )
+                                    self._time_measurements['comparing'].append(
+                                        time.perf_counter_ns() - t0
+                                    )
                                     return False
                             else:
                                 if not np.allclose(
@@ -450,6 +488,9 @@ class TransformationVerifier:
                                         status, inputs_save,
                                         cutout_symbol_constraints,
                                         free_symbols_map
+                                    )
+                                    self._time_measurements['comparing'].append(
+                                        time.perf_counter_ns() - t0
                                     )
                                     return False
                         except KeyError:
@@ -499,6 +540,9 @@ class TransformationVerifier:
                     decay_by = 0
                     i += 1
                     bar.update(1)
+                self._time_measurements['comparing'].append(
+                    time.perf_counter_ns() - t0
+                )
             n_decayed = len(decays)
             if enforce_finiteness and n_decayed > 0:
                 print(
@@ -609,7 +653,7 @@ class TransformationVerifier:
         symbol_constraints: Dict = None, data_constraints: Dict = None,
         strict_config: bool = False, minimize_input: bool = False,
         use_alibi_nodes: bool = False
-    ) -> bool:
+    ) -> Tuple[bool, int]:
         with tempfile.TemporaryDirectory(
             prefix='fuzzyflow_dacecache_',
             suffix='_' + self.xform.__class__.__name__,
@@ -631,17 +675,28 @@ class TransformationVerifier:
                 config.Config.set('cache', value='name')
                 config.Config.set('default_build_folder', value=build_dir)
                 with warnings.catch_warnings():
-                    #warnings.simplefilter(
-                    #    'ignore'
-                    #)
+                    # Ignore library already loaded warnings.
+                    warnings.simplefilter(
+                        'ignore', lineno=104, append=True
+                    )
+                    # Ignore typecasting warnings.
+                    warnings.simplefilter(
+                        'ignore', lineno=393, append=True
+                    )
                     try:
-                        return self._do_verify(
+                        start_validate = time.perf_counter_ns()
+                        retval = self._do_verify(
                             n_samples, status, debug_save_path,
                             enforce_finiteness,
                             symbol_constraints, data_constraints, strict_config,
                             use_alibi_nodes=use_alibi_nodes,
-                            reduce_input_config=True
+                            reduce_input_config=minimize_input
                         )
+                        end_validate = time.perf_counter_ns()
+                        dt = end_validate - start_validate
+                        for k, v in self._time_measurements.items():
+                            print(f'{k}: {np.median(v) / 1e9} s')
+                        return retval, dt
                     except Exception as e:
                         self._catch_failure(
                             FailureReason.EXCEPTION, str(e), status, exception=e

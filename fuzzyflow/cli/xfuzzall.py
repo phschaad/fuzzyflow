@@ -190,7 +190,7 @@ def main():
                 match, sdfg, args.sampling_strategy,
                 instance_out_path, instance_success_path
             )
-            valid = verifier.verify(
+            valid, _ = verifier.verify(
                 args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
                 symbol_constraints=symbol_constraints,
                 data_constraints=data_constraints
@@ -276,7 +276,7 @@ def main():
                 match, sdfg, args.sampling_strategy, instance_out_path,
                 instance_success_path
             )
-            valid = verifier.verify(
+            valid, _ = verifier.verify(
                 args.runs, status=StatusLevel.DEBUG,
                 enforce_finiteness=True,
                 symbol_constraints=symbol_constraints,

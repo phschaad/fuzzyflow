@@ -127,12 +127,14 @@ def main():
         success_dir=success_dir
     )
 
-    valid = verifier.verify(
+    valid, dt = verifier.verify(
         args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
-        symbol_constraints=symbol_constraints, data_constraints=data_constraints
+        symbol_constraints=symbol_constraints,
+        data_constraints=data_constraints, minimize_input=True
     )
 
     print('Transformation is valid' if valid else 'INVALID Transformation!')
+    print('Time taken (s):', dt / 1e9)
 
 
 if __name__ == '__main__':

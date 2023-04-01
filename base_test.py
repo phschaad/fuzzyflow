@@ -58,13 +58,14 @@ def _test_from_basedir(datadir: str, category_name: str,
                             output_dir=out_dir,
                             success_dir=success_dir
                         )
-                        valid = valid and verifier.verify(
+                        nvalid, _ = verifier.verify(
                             n_samples=100,
                             debug_save_path=os.path.join(
                                 dbg_save_dir, file.split('.')[0]
                             ),
                             enforce_finiteness=True
                         )
+                        valid = valid and nvalid
                         if not valid:
                             offending_file = file
                             break
