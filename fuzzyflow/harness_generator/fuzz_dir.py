@@ -23,9 +23,10 @@ def remove_inst(sdfg):
 def harness_regen():
     os.system("cp "+sdfg2cpp_path+" .")
     os.system("cp "+depickler_path+" .")
-    os.system("python3 ./depickle.py")
+    ret = os.system("python3 ./depickle.py")
+    assert(ret == 0)
 
-def fuzz():
+def fuzz(compile_only=False):
     print("Preparing fuzzer in "+os.getcwd())
     sdfg_pre = dace.SDFG.from_file('pre.sdfg')
     sdfg_post = dace.SDFG.from_file('post.sdfg')
@@ -52,17 +53,20 @@ def fuzz():
         os.exit()
     os.system("./harness harness.dat out1.dat out2.dat")
 
-    # now lets use afl
-    compiler = AFL_PATH+"afl-g++-fast"
-    compile_cmd = " ".join([compiler, flags, "harness.cpp", src_pre, src_post, inc_pre, inc_post, inc_dace, inc_cuda, libs_cuda, "-o", "harness"])
-    print(compile_cmd)
-    os.system(compile_cmd)
-    os.system("rm -rf afl_seeds afl_finds")
-    os.system("mkdir afl_seeds")
-    os.system("cp harness.dat afl_seeds")
-    os.system("mkdir afl_finds")
-    afl_cmd = AFL_PATH+"afl-fuzz -i afl_seeds -o afl_finds -t 10000 -V 10 -- ./harness @@ out1.dat out2.dat"
-    os.system(afl_cmd)
+    if compile_only:
+        pass
+    else:
+        # now lets use afl
+        compiler = AFL_PATH+"afl-g++-fast"
+        compile_cmd = " ".join([compiler, flags, "harness.cpp", src_pre, src_post, inc_pre, inc_post, inc_dace, inc_cuda, libs_cuda, "-o", "harness"])
+        print(compile_cmd)
+        os.system(compile_cmd)
+        os.system("rm -rf afl_seeds afl_finds")
+        os.system("mkdir afl_seeds")
+        os.system("cp harness.dat afl_seeds")
+        os.system("mkdir afl_finds")
+        afl_cmd = AFL_PATH+"afl-fuzz -i afl_seeds -o afl_finds -t 10000 -V 30 -- ./harness @@ out1.dat out2.dat"
+        os.system(afl_cmd)
 
 def traverse_dir(path):
     fuzzdirs = []
@@ -77,7 +81,7 @@ def traverse_dir(path):
         origwd = os.getcwd()
         os.chdir(f)
         harness_regen()
-        fuzz()
+        fuzz(compile_only=True)
         os.chdir(origwd)
 
 if len(sys.argv) > 1:
