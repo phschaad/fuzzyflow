@@ -183,7 +183,10 @@ class TransformationVerifier:
         strict_config: bool = False, use_alibi_nodes: bool = False,
         reduce_input_config: bool = False
     ) -> bool:
-        cutout = self.cutout(status=status)
+        cutout = self.cutout(
+            status=status, use_alibi_nodes=use_alibi_nodes,
+            reduce_input_config=reduce_input_config
+        )
         orig_cutout = deepcopy(cutout)
         self._original_cutout = orig_cutout
         if status >= StatusLevel.DEBUG:
@@ -637,7 +640,7 @@ class TransformationVerifier:
                             enforce_finiteness,
                             symbol_constraints, data_constraints, strict_config,
                             use_alibi_nodes=use_alibi_nodes,
-                            reduce_input_config=minimize_input
+                            reduce_input_config=True
                         )
                     except Exception as e:
                         self._catch_failure(
