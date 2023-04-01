@@ -642,7 +642,7 @@ class TransformationVerifier:
             except Exception:
                 with open(os.path.join(self.success_dir, 'EXCEPT'), 'w') as f:
                     f.write('Failed to generate harness')
-                    traceback.print_exec(file=f)
+                    traceback.print_exc(file=f)
 
         return True
 
