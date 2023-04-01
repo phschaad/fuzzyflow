@@ -631,9 +631,10 @@ class TransformationVerifier:
                 config.Config.set('cache', value='name')
                 config.Config.set('default_build_folder', value=build_dir)
                 with warnings.catch_warnings():
-                    #warnings.simplefilter(
-                    #    'ignore'
-                    #)
+                    # Silence library loaded warning.
+                    warnings.simplefilter(
+                        'ignore', lineno=104
+                    )
                     try:
                         return self._do_verify(
                             n_samples, status, debug_save_path,
