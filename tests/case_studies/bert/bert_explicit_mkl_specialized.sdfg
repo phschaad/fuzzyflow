@@ -41776,7 +41776,7 @@
         },
         {
           "attributes": {
-            "collapse": 1,
+            "collapse": 4,
             "debuginfo": {
               "end_column": 53,
               "end_line": 132,
@@ -41831,7 +41831,7 @@
               ],
               "type": "Range"
             },
-            "schedule": "Default",
+            "schedule": "CPU_Multicore",
             "unroll": false
           },
           "id": 94,

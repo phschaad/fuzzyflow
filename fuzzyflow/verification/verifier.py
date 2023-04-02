@@ -59,7 +59,8 @@ class TransformationVerifier:
         'compiling': [],
         'constraints': [],
         'sampling': [],
-        'running': [],
+        'running_pre': [],
+        'running_post': [],
         'comparing': [],
     }
 
@@ -379,7 +380,6 @@ class TransformationVerifier:
                     time.perf_counter_ns() - t0
                 )
 
-                t0 = time.perf_counter_ns()
                 orig_containers = dict()
                 for k in inputs.keys():
                     if not k in orig_containers:
@@ -391,8 +391,12 @@ class TransformationVerifier:
                     bar.write(
                         'Running pre-transformation cutout in a subprocess'
                     )
+                t0 = time.perf_counter_ns()
                 ret_orig = run_subprocess_precompiled(
                     prog_orig, orig_containers, free_symbols_map
+                )
+                self._time_measurements['running_pre'].append(
+                    time.perf_counter_ns() - t0
                 )
                 if status >= StatusLevel.VERBOSE:
                     bar.write(
@@ -412,16 +416,17 @@ class TransformationVerifier:
                     bar.write(
                         'Running post-transformation cutout in a subprocess'
                     )
+                t0 = time.perf_counter_ns()
                 ret_xformed = run_subprocess_precompiled(
                     prog_xformed, xformed_containers, free_symbols_map
+                )
+                self._time_measurements['running_post'].append(
+                    time.perf_counter_ns() - t0
                 )
                 if status >= StatusLevel.VERBOSE:
                     bar.write(
                         'Collecting post-transformation cutout data reports'
                     )
-                self._time_measurements['running'].append(
-                    time.perf_counter_ns() - t0
-                )
 
                 t0 = time.perf_counter_ns()
                 if status >= StatusLevel.VERBOSE:
@@ -695,7 +700,11 @@ class TransformationVerifier:
                         end_validate = time.perf_counter_ns()
                         dt = end_validate - start_validate
                         for k, v in self._time_measurements.items():
-                            print(f'{k}: {np.median(v) / 1e9} s')
+                            print(
+                                k + ': median ', str(np.median(v) / 1e9),
+                                's, mean ', str(np.mean(v) / 1e9),
+                                's, std ', str(np.std(v) / 1e9), 's'
+                            )
                         return retval, dt
                     except Exception as e:
                         self._catch_failure(

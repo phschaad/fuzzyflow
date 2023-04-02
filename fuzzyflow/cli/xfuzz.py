@@ -56,6 +56,12 @@ def main():
     )
 
     parser.add_argument(
+        '--reduce',
+        action=argparse.BooleanOptionalAction,
+        help='Reduce the input configuration',
+    )
+
+    parser.add_argument(
         '-s',
         '--sampling-strategy',
         type=SamplingStrategy,
@@ -122,6 +128,7 @@ def main():
         'ignore', message='.*already loaded, renaming file.*'
     )
 
+    reduce = True if args.reduce else False
     verifier = TransformationVerifier(
         xform, sdfg, args.sampling_strategy, output_dir=output_dir,
         success_dir=success_dir
@@ -130,7 +137,7 @@ def main():
     valid, dt = verifier.verify(
         args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
         symbol_constraints=symbol_constraints,
-        data_constraints=data_constraints, minimize_input=True
+        data_constraints=data_constraints, minimize_input=reduce
     )
 
     print('Transformation is valid' if valid else 'INVALID Transformation!')

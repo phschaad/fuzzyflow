@@ -92,6 +92,12 @@ def main():
     )
 
     parser.add_argument(
+        '--reduce',
+        action=argparse.BooleanOptionalAction,
+        help='Reduce the input configuration',
+    )
+
+    parser.add_argument(
         '--data-constraints-file',
         type=str,
         help='<Path to constraints file for data containers>'
@@ -186,6 +192,7 @@ def main():
                 instance_success_path = os.path.join(
                     success_dir, xf_name + '_' + str(i)
                 )
+            reduce = True if args.reduce else False
             verifier = TransformationVerifier(
                 match, sdfg, args.sampling_strategy,
                 instance_out_path, instance_success_path
@@ -193,7 +200,7 @@ def main():
             valid, _ = verifier.verify(
                 args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
                 symbol_constraints=symbol_constraints,
-                data_constraints=data_constraints
+                data_constraints=data_constraints, minimize_input=reduce
             )
             if not valid:
                 print('INVALID Transformation!')
