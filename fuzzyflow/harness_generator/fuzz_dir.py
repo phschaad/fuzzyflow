@@ -4,6 +4,7 @@ import os
 import sys
 import glob
 import dace
+import subprocess
 from dace import dtypes
 
 ## PATHS ## (fix those)
@@ -43,6 +44,7 @@ def fuzz(compile_only=False):
     inc_cuda = "-I/usr/local/cuda/include"
     libs_cuda = "-L/usr/local/cuda/lib64/ -lcudart -L.dacecache/"+sdfg_post.name+"/build/ -l"+sdfg_post.name+" -Wl,-rpath="+os.getcwd()+"/.dacecache/"+sdfg_post.name+"/build/"
     flags = "-O3 -fopenmp -DWITH_CUDA"
+    flags = "-O3 -DWITH_CUDA"
 
     # first compile using gcc, just make sure it works
     compiler = "g++"
@@ -65,8 +67,18 @@ def fuzz(compile_only=False):
         os.system("mkdir afl_seeds")
         os.system("cp harness.dat afl_seeds")
         os.system("mkdir afl_finds")
-        afl_cmd = AFL_PATH+"afl-fuzz -i afl_seeds -o afl_finds -t 10000 -V 30 -- ./harness @@ out1.dat out2.dat"
-        os.system(afl_cmd)
+        tasks = []
+        afl_cmd = AFL_PATH+"afl-fuzz -i afl_seeds -o afl_finds -t 10000 -V 10 -M fuzzer0 -- ./harness @@ out1.dat out2.dat"
+        p = subprocess.Popen(afl_cmd, shell=True)
+        tasks += [p]
+        for t in range(1, 7):
+            afl_cmd = AFL_PATH+"afl-fuzz -i afl_seeds -o afl_finds -t 10000 -V 60 -S fuzzer"+str(t)+"-- ./harness @@ out1.dat out2.dat"
+            p = subprocess.Popen(afl_cmd, stdout=subprocess.DEVNULL, shell=True)
+            tasks += [p]
+        for t in tasks:
+            t.wait()
+            
+        
 
 def traverse_dir(path):
     fuzzdirs = []
@@ -81,7 +93,7 @@ def traverse_dir(path):
         origwd = os.getcwd()
         os.chdir(f)
         harness_regen()
-        fuzz(compile_only=True)
+        fuzz(compile_only=False)
         os.chdir(origwd)
 
 if len(sys.argv) > 1:
