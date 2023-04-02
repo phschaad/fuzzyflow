@@ -84,20 +84,21 @@ def print_arg(arg, argname, sdfg, prefix, code_file):
     dt = args[argname]
     fmt_string = type_conv(frm='c_type', to='fmtstring', val=elemtypec)
     if not allocate:
-        print("  printf(\""+prefix+"%s = "+fmt_string+"\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
+        print("  fprintf(repro, \""+prefix+"%s = "+fmt_string+"\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
     else:
-        print("  printf(\""+prefix+"%s = np.ndarray(shape="+str(dt.shape)+", order=\\\"C\\\", dtype="+str(dt.dtype)+", buffer=np.array([\",\""+str(argname)+"\");", file=code_file)
+        print("  fprintf(repro, \""+prefix+"%s = np.ndarray(shape="+str(dt.shape)+", order=\\\"C\\\", dtype="+str(dt.dtype)+", buffer=np.array([\",\""+str(argname)+"\");", file=code_file)
         print("  for (size_t i=0; i<"+symstr(dt.total_size)+"; i++) {", file=code_file)
         if type_conv('c_type', 'is_complex', elemtypec):
-            print("    printf(\""+fmt_string+" , \", "+str(argname)+"[i].real(), "+str(argname)+"[i].imag());", file=code_file)
+            print("    fprintf(repro, \""+fmt_string+" , \", "+str(argname)+"[i].real(), "+str(argname)+"[i].imag());", file=code_file)
         else:
-            print("    printf(\""+fmt_string+" , \", "+str(argname)+"[i]);", file=code_file)
-        print("    if (i%10==0) printf(\"\\n\");", file=code_file)
+            print("    fprintf(repro, \""+fmt_string+" , \", "+str(argname)+"[i]);", file=code_file)
+        print("    if (i%10==0) fprintf(repro, \"\\n\");", file=code_file)
         print("  }", file=code_file)
-        print("  printf(\"]))\\n\");", file=code_file)
+        print("  fprintf(repro, \"]))\\n\");", file=code_file)
 
 
 def generate_repro_py(code_file, sdfg, prefix, args, kwargs):
+    print("  if (repro != NULL) {", file=code_file)
     arglist = sdfg.arglist()
     # print scalars first, since array shapes might depend on them
     for arg in arglist:
@@ -111,6 +112,7 @@ def generate_repro_py(code_file, sdfg, prefix, args, kwargs):
             print_arg(kwargs[arg], arg, sdfg, prefix, code_file)
         else:
             raise ValueError("Datatype not implemented!")
+    print("  }", file=code_file)
 
 
 def autogen_arg(arg, argname, initializer, code_file):
@@ -224,7 +226,8 @@ def generate_headers(code_file, sdfg1, sdfg2):
     print("#define DACE_UINT8 unsigned char", file=code_file)
     print("#define DACE_COMPLEX128 dace::complex128", file=code_file)
     print("", file=code_file)
-    print("FILE* argdata;", file=code_file)
+    print("FILE* argdata = NULL;", file=code_file)
+    print("FILE* repro = NULL;", file=code_file)
     print("int dacefuzz_seed;", file=code_file)
     print("", file=code_file)
 
@@ -274,11 +277,6 @@ def generate_validators(code_file, allocs, sym_constraints, autoinit_args, sdfg,
             if arg in sym_constraints:
                 print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
                 print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
-        elif arg in sym_constraints:
-            print("Hitting a part of untested code! Now you found a test :)")
-            exit(1)
-            print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
-            print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
         else:
             raise ValueError("Unsupported data type found while generating validators")
     for arg in arglist:
@@ -294,13 +292,13 @@ def generate_validators(code_file, allocs, sym_constraints, autoinit_args, sdfg,
                     if arg in autoinit_args.keys():
                         print("  " + "dacefuzz_init_"+str(autoinit_args[arg])+"_"+str(typec)+"("+str(arg)+", "+symstr(dt.total_size) +");", file=code_file)
                     print("  }", file=code_file)
+                    if arg in sym_constraints:
+                        print("Hitting a part of untested code! Now you found a test :)")
+                        exit(1)
+                        print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
+                        print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
         elif isinstance(dt, dace.data.Scalar):
             pass
-        elif arg in sym_constraints:
-            print("Hitting a part of untested code! Now you found a test :)")
-            exit(1)
-            print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
-            print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
         else:
             raise ValueError("Unsupported data type found while generating validators")
 
@@ -333,6 +331,7 @@ def dump_args(out_lang, out_file, autoinit_args, sym_constraints, sdfg1, sdfg2, 
             print("  if (argc < 3) {\n    printf(\"Call this verifier with a data in and out argument, i.e: %s data_in data_out\\n\", argv[0]); exit(EXIT_FAILURE);\n  }\n", file=code_file)
         else:
             print("  if (argc < 4) {\n    printf(\"Call this verifier with a data in and two datafile arguments, i.e: %s data_in data_out_1 data_out_2\\n\", argv[0]); exit(EXIT_FAILURE);\n  }\n", file=code_file)
+            print("  if (argc > 4) {\n    repro = fopen(argv[4], \"w\");  }\n", file=code_file)
         allocs = generate_allocs(code_file, sdfg1, args, kwargs) # allocate mem
         generate_reads(code_file, autoinit_args, sdfg1, args, kwargs) # read the inputs
         sizes = generate_validators(code_file, allocs, sym_constraints, autoinit_args, sdfg1, args, kwargs)
@@ -348,6 +347,7 @@ def dump_args(out_lang, out_file, autoinit_args, sym_constraints, sdfg1, sdfg2, 
             generate_reads(code_file, autoinit_args, sdfg2, args, kwargs) # read the inputs
             sizes = generate_validators(code_file, allocs, sym_constraints, autoinit_args, sdfg2, args, kwargs)
             generate_repro_py(code_file, sdfg2, "sdfg2_", args, kwargs)
+            print("  if (repro != NULL) {\n    fclose(repro);  }\n", file=code_file)
             print("", file=code_file)
             print("  /* call "+ sdfg2.name + " */", file=code_file)
             generate_call(code_file, sdfg2, args, kwargs) # generate the call
