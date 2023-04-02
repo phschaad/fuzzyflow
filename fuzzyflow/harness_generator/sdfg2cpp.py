@@ -4,6 +4,23 @@ from dace.symbolic import symstr
 
 import struct
 
+defined_types = [
+        {'c_type': 'int',             'fmtstring': '%i',       'pack':'i', 'is_complex':False,  'size': 4, 'nptype': np.int32},
+        {'c_type': 'double',          'fmtstring': '%lf',      'pack':'d',  'is_complex':False, 'size': 8, 'nptype': np.double},
+        {'c_type': 'float',          'fmtstring': '%f',      'pack':'f',  'is_complex':False, 'size': 4, 'nptype': np.float32},
+        {'c_type': 'DACE_INT64',      'fmtstring': '%lli',     'pack':'q',  'is_complex':False, 'size': 8, 'nptype': np.int64},
+        {'c_type': 'DACE_UINT64',     'fmtstring': '%llu',     'pack':'Q',  'is_complex':False, 'size': 8, 'nptype': np.uint64},
+        {'c_type': 'DACE_UINT8',     'fmtstring': '%u',     'pack':'c',  'is_complex':False, 'size': 1, 'nptype': np.uint8},
+        {'c_type': 'DACE_COMPLEX128', 'fmtstring': '%lf+%lfj', 'pack':'dd',  'is_complex':True, 'size': 16, 'nptype': np.complex128},
+]
+
+def type_conv(frm, to, val):
+    for t in defined_types:
+        if t[frm] == val:
+            return t[to]
+    raise ValueError("Type conversion failed: ("+frm+" -> "+to+" for "+str(val))
+
+
 def get_arg_type(arg, argname):
     elems = 1
     elemsize = 0
@@ -20,32 +37,8 @@ def get_arg_type(arg, argname):
     elif type(arg) == np.ndarray:
         allocate = True
         elems = arg.size
-        if (arg.dtype == np.int32):
-            elemsize = 4
-            elemtypec = "int"
-        elif (arg.dtype == np.float32):
-            elemsize = 4
-            elemtypec = "float"
-        elif (arg.dtype == np.double):
-            elemsize = 8
-            elemtypec = "double"
-        elif (arg.dtype == np.int64):
-            elemsize = 8
-            elemtypec = "DACE_INT64"
-        elif (arg.dtype == np.uint64):
-            elemsize = 8
-            elemtypec = "DACE_UINT64"
-        elif (arg.dtype == np.uint8):
-            elemsize = 1
-            elemtypec = "DACE_UINT8"
-        elif (arg.dtype == np.int8):
-            elemsize = 1
-            elemtypec = "DACE_INT8"
-        elif (arg.dtype == np.complex128):
-            elemsize = 16
-            elemtypec = "DACE_COMPLEX128"
-        else:
-            raise(ValueError("Unsupported np type "+str(arg.dtype)))
+        elemsize = type_conv('nptype', 'size', arg.dtype)
+        elemtypec = type_conv('nptype', 'c_type', arg.dtype)
     return (allocate, elems, elemsize, elemtypec)
 
 
@@ -58,52 +51,24 @@ def write_arg(arg, data_file):
         elemsize = 4
         data_file.write((arg).to_bytes(elemsize, byteorder='little', signed=True))
     elif isinstance(arg, float):
-        ba = bytearray(struct.pack("d", arg))
+        ba = bytearray(struct.pack("f", arg))
         data_file.write(ba)
     elif type(arg) == np.ndarray:
-        allocate = True
         elems = arg.size
-        if (arg.dtype == np.int32):
-            elemsize = 4
-            for x in np.nditer(arg.T):
-                data_file.write((x.item()).to_bytes(elemsize, byteorder='little', signed=True))
-        elif (arg.dtype == np.float32):
-            for x in np.nditer(arg.T):
-                ba = bytearray(struct.pack("f", x.item()))
-                data_file.write(ba)
-        elif (arg.dtype == np.double):
-            for x in np.nditer(arg.T):
-                ba = bytearray(struct.pack("d", x.item()))
-                data_file.write(ba)
-        elif (arg.dtype == np.uint64):
-            for x in np.nditer(arg.T):
-                ba = bytearray(struct.pack("Q", x.item()))
-                data_file.write(ba)
-        elif (arg.dtype == np.int64):
-            for x in np.nditer(arg.T):
-                ba = bytearray(struct.pack("q", x.item()))
-                data_file.write(ba)
-        elif (arg.dtype == np.uint8):
-            for x in np.nditer(arg.T):
-                ba = bytearray(struct.pack("B", x.item()))
-                data_file.write(ba)
-        elif (arg.dtype == np.int8):
-            for x in np.nditer(arg.T):
-                ba = bytearray(struct.pack("b", x.item()))
-                data_file.write(ba)
-        elif (arg.dtype == np.complex128):
-            for x in np.nditer(arg.T):
-                ba = bytearray(struct.pack("d", x.item().real))
-                data_file.write(ba)
-                ba = bytearray(struct.pack("d", x.item().imag))
-                data_file.write(ba)
-        else:
-            raise(ValueError("Unsupported np type "+str(arg.dtype)))
+        packstr = type_conv('nptype', 'pack', arg.dtype)
+        is_complex = type_conv('nptype', 'is_complex', arg.dtype)
+        for x in np.nditer(arg.T):
+            if is_complex:
+                ba = bytearray(struct.pack(packstr, x.item().real, xitem().imag))
+            else:
+                ba = bytearray(struct.pack(packstr, x.item()))
+            data_file.write(ba)
     else:
         raise ValueError("Unsupported type: "+str(type(arg)))
 
 
-def read_arg(arg, argname, code_file):
+
+def read_arg(arg, argname, sdfg, code_file):
     (allocate, elems, elemsize, elemtypec) = get_arg_type(arg, argname)
     # now read the data, lets keep this c compatible
     makeptr=""
@@ -112,19 +77,43 @@ def read_arg(arg, argname, code_file):
     else:
         makeptr="&"
     print("  " + "dacefuzz_read_"+str(elemtypec)+"( "+str(makeptr)+str(argname)+", argdata, "+str(elems) +");", file=code_file)
+
+def print_arg(arg, argname, sdfg, prefix, code_file):
+    (allocate, elems, elemsize, elemtypec) = get_arg_type(arg, argname)
+    args = sdfg.arglist()
+    dt = args[argname]
+    fmt_string = type_conv(frm='c_type', to='fmtstring', val=elemtypec)
     if not allocate:
-        if elemtypec == "int":
-            print("  printf(\"%s = %i\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
-        elif elemtypec == "DACE_INT64":
-            print("  printf(\"%s = %lli\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
-        elif elemtypec == "DACE_UINT64":
-            print("  printf(\"%s = %llu\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
-        elif elemtypec == "DACE_UINT8":
-            print("  printf(\"%s = %u\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
-        elif elemtypec == "DACE_INT8":
-            print("  printf(\"%s = %i\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
-        elif elemtypec == "double":
-            print("  printf(\"%s = %lf\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
+        print("  fprintf(repro, \""+prefix+"%s = "+fmt_string+"\\n\", \""+str(argname)+"\", "+str(argname) +");", file=code_file) #give some insight into symbols for debugging
+    else:
+        print("  fprintf(repro, \""+prefix+"%s = np.ndarray(shape="+str(dt.shape)+", order=\\\"C\\\", dtype="+str(dt.dtype)+", buffer=np.array([\",\""+str(argname)+"\");", file=code_file)
+        print("  for (size_t i=0; i<"+symstr(dt.total_size)+"; i++) {", file=code_file)
+        if type_conv('c_type', 'is_complex', elemtypec):
+            print("    fprintf(repro, \""+fmt_string+" , \", "+str(argname)+"[i].real(), "+str(argname)+"[i].imag());", file=code_file)
+        else:
+            print("    fprintf(repro, \""+fmt_string+" , \", "+str(argname)+"[i]);", file=code_file)
+        print("    if (i%10==0) fprintf(repro, \"\\n\");", file=code_file)
+        print("  }", file=code_file)
+        print("  fprintf(repro, \"]))\\n\");", file=code_file)
+
+
+def generate_repro_py(code_file, sdfg, prefix, args, kwargs):
+    print("  if (repro != NULL) {", file=code_file)
+    arglist = sdfg.arglist()
+    # print scalars first, since array shapes might depend on them
+    for arg in arglist:
+        if isinstance(arglist[arg], dace.data.Scalar):
+            print_arg(kwargs[arg], arg, sdfg, prefix, code_file)
+    # now print arrays and ignore the scalars
+    for arg in arglist:
+        if isinstance(arglist[arg], dace.data.Scalar):
+            pass
+        elif isinstance(arglist[arg], dace.data.Array):
+            print_arg(kwargs[arg], arg, sdfg, prefix, code_file)
+        else:
+            raise ValueError("Datatype not implemented!")
+    print("  }", file=code_file)
+
 
 def autogen_arg(arg, argname, initializer, code_file):
     (allocate, elems, elemsize, elemtypec) = get_arg_type(arg, argname)
@@ -162,7 +151,7 @@ def compare_arg(arg, argname, code_file):
     print("    "+str(elemtypec) +" dacefuzz_tmp2;", file=code_file)
     print("    " + "dacefuzz_read_"+str(elemtypec)+"(&dacefuzz_tmp1, out1, 1);", file=code_file)
     print("    " + "dacefuzz_read_"+str(elemtypec)+"(&dacefuzz_tmp2, out2, 1);", file=code_file)
-    if elemtypec == "DACE_COMPLEX128":
+    if type_conv('c_type', 'is_complex', elemtypec):
         print("    " + "double dacefuzz_diff_real = fabs(((double)dacefuzz_tmp1.real()) - ((double)dacefuzz_tmp2.real()));", file=code_file)
         print("    " + "double dacefuzz_diff_imag = fabs(((double)dacefuzz_tmp1.imag()) - ((double)dacefuzz_tmp2.imag()));", file=code_file)
         print("    " + "double dacefuzz_diff = dacefuzz_diff_real + dacefuzz_diff_imag;", file=code_file)
@@ -237,7 +226,9 @@ def generate_headers(code_file, sdfg1, sdfg2):
     print("#define DACE_UINT8 unsigned char", file=code_file)
     print("#define DACE_COMPLEX128 dace::complex128", file=code_file)
     print("", file=code_file)
-    print("FILE* argdata;", file=code_file)
+    print("FILE* argdata = NULL;", file=code_file)
+    print("FILE* repro = NULL;", file=code_file)
+    print("int dacefuzz_seed;", file=code_file)
     print("", file=code_file)
 
 def generate_write_back(code_file, datafile, sdfg, args, kwargs):
@@ -251,14 +242,16 @@ def generate_reads(code_file, autoinit_args, sdfg, args, kwargs):
     print("  /* read the input data of "+sdfg.name+" */", file=code_file)
     print("  argdata = fopen(argv[1], \"rb\");", file=code_file);
     print("  if (argdata == NULL) {printf(\"Could not open data file %s!\\n\", argv[1]); exit(EXIT_FAILURE);}\n", file=code_file)
-    print("  srand(23);", file=code_file)
+    print("  dacefuzz_read_int(&dacefuzz_seed, argdata, 1);", file=code_file)
+    print("  printf(\"Random seed used for autoinit args: %i\\n\", dacefuzz_seed);", file=code_file);
+    print("  srand(dacefuzz_seed);", file=code_file)
     for arg in args:
-        read_arg(arg, None, code_file)
+        read_arg(arg, None, sdfg, code_file)
     for arg in kwargs:
         if str(arg) in autoinit_args.keys():
             autogen_arg(kwargs[arg], arg, autoinit_args[str(arg)], code_file)
         else:
-            read_arg(kwargs[arg], arg, code_file)
+            read_arg(kwargs[arg], arg, sdfg, code_file)
     print("  fclose(argdata);", file=code_file)
 
 
@@ -273,9 +266,19 @@ def generate_allocs(code_file, sdfg, args, kwargs):
     return allocated_syms
 
 
-def generate_validators(code_file, allocs, sym_constraints, sdfg, args, kwargs):
+def generate_validators(code_file, allocs, sym_constraints, autoinit_args, sdfg, args, kwargs):
     print("  /* validate if the input data matches the sdfg argument \"specification\" */", file=code_file)
     arglist = sdfg.arglist()
+    for arg in arglist:
+        dt = arglist[arg]
+        if isinstance(dt, dace.data.Array):
+            pass # we validate those below, scalars first, as they determine array sizes
+        elif isinstance(dt, dace.data.Scalar):
+            if arg in sym_constraints:
+                print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
+                print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
+        else:
+            raise ValueError("Unsupported data type found while generating validators")
     for arg in arglist:
         dt = arglist[arg]
         if isinstance(dt, dace.data.Array):
@@ -283,18 +286,19 @@ def generate_validators(code_file, allocs, sym_constraints, sdfg, args, kwargs):
                 (name, size, elemsize, typec, allocated) = alloc
                 if str(name) == str(arg):
                     print("  if ("+str(size)+"*"+str(elemsize) + " < (" + symstr(dt.total_size) + ")*"+str(elemsize)+") { //check if "+str(arg)+" has correct size (lhs=allocated size, rhs=symbolic size)", file=code_file)
-                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+symstr(dt.total_size)+"=%i MB) - resizing\\n\", ("+symstr(dt.total_size)+"*"+str(elemsize)+")/1000000);", file=code_file)
+                    print("    printf(\"The size of the passed in "+str(arg)+" ("+str(size)+" elements) does not match its specification in "+sdfg.name+" ("+symstr(dt.total_size)+"=%lf MB) - resizing\\n\", (double)("+symstr(dt.total_size)+"*"+str(elemsize)+")/1000000.0);", file=code_file)
                     print("    "+str(name)+ " = ("+str(typec)+"*) realloc("+str(name)+", (" + symstr(dt.total_size) + ")*"+str(elemsize)+");", file=code_file)
                     print("    assert("+str(name)+" != NULL);", file=code_file)
-                    # here we could also reallocate to be able to continue - but then the data in the new region is undefined
+                    if arg in autoinit_args.keys():
+                        print("  " + "dacefuzz_init_"+str(autoinit_args[arg])+"_"+str(typec)+"("+str(arg)+", "+symstr(dt.total_size) +");", file=code_file)
                     print("  }", file=code_file)
+                    if arg in sym_constraints:
+                        print("Hitting a part of untested code! Now you found a test :)")
+                        exit(1)
+                        print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
+                        print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
         elif isinstance(dt, dace.data.Scalar):
-            if arg in sym_constraints:
-                print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
-                print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
-        elif arg in sym_constraints:
-            print('  if ('+str(arg) + '<' + symstr(sym_constraints[arg][0]) + '){printf(\"Current symbol doesn\'t fit lower constraint - bail out.\\n\"); return 0;}' , file=code_file)
-            print('  if ('+str(arg) + '>' + symstr(sym_constraints[arg][1]) + '){printf(\"Current symbol doesn\'t fit upper constraint - bail out.\\n\"); return 0;}' , file=code_file)
+            pass
         else:
             raise ValueError("Unsupported data type found while generating validators")
 
@@ -327,9 +331,11 @@ def dump_args(out_lang, out_file, autoinit_args, sym_constraints, sdfg1, sdfg2, 
             print("  if (argc < 3) {\n    printf(\"Call this verifier with a data in and out argument, i.e: %s data_in data_out\\n\", argv[0]); exit(EXIT_FAILURE);\n  }\n", file=code_file)
         else:
             print("  if (argc < 4) {\n    printf(\"Call this verifier with a data in and two datafile arguments, i.e: %s data_in data_out_1 data_out_2\\n\", argv[0]); exit(EXIT_FAILURE);\n  }\n", file=code_file)
+            print("  if (argc > 4) {\n    repro = fopen(argv[4], \"w\");  }\n", file=code_file)
         allocs = generate_allocs(code_file, sdfg1, args, kwargs) # allocate mem
         generate_reads(code_file, autoinit_args, sdfg1, args, kwargs) # read the inputs
-        sizes = generate_validators(code_file, allocs, sym_constraints, sdfg1, args, kwargs)
+        sizes = generate_validators(code_file, allocs, sym_constraints, autoinit_args, sdfg1, args, kwargs)
+        generate_repro_py(code_file, sdfg1, "sdfg1_", args, kwargs)
         print("", file=code_file)
         print("  /* call "+ sdfg1.name + " */", file=code_file)
         generate_call(code_file, sdfg1, args, kwargs) # generate the call
@@ -339,7 +345,9 @@ def dump_args(out_lang, out_file, autoinit_args, sym_constraints, sdfg1, sdfg2, 
         print("  fclose(outdata1);\n", file=code_file)
         if sdfg2 is not None:
             generate_reads(code_file, autoinit_args, sdfg2, args, kwargs) # read the inputs
-            sizes = generate_validators(code_file, allocs, sym_constraints, sdfg2, args, kwargs)
+            sizes = generate_validators(code_file, allocs, sym_constraints, autoinit_args, sdfg2, args, kwargs)
+            generate_repro_py(code_file, sdfg2, "sdfg2_", args, kwargs)
+            print("  if (repro != NULL) {\n    fclose(repro);  }\n", file=code_file)
             print("", file=code_file)
             print("  /* call "+ sdfg2.name + " */", file=code_file)
             generate_call(code_file, sdfg2, args, kwargs) # generate the call
@@ -359,6 +367,7 @@ def dump_args(out_lang, out_file, autoinit_args, sym_constraints, sdfg1, sdfg2, 
 
     with open(out_file + ".dat", "wb") as data_file:
         # serialize arguments as binaries
+        data_file.write(int(23).to_bytes(4, byteorder='little', signed=True)) #write a random seed - will be modified by fuzzer
         for arg in args:
             write_arg(arg, data_file)
         for arg in kwargs:
@@ -380,34 +389,11 @@ def read_back_arg(arg, argname, data_file):
     elif type(arg) == np.ndarray:
         elems = arg.size
         for i in range(0, elems):
-            if (arg.dtype == np.int32):
-                elemsize = 4
-                data = data_file.read(elemsize)
-                value = struct.unpack('i', data)[0]
-                arg.flat[i] = value
-            elif (arg.dtype == np.int64):
-                elemsize = 8
-                data = data_file.read(elemsize)
-                value = struct.unpack('q', data)[0]
-                arg.flat[i] = value
-            elif (arg.dtype == np.uint64):
-                elemsize = 8
-                data = data_file.read(elemsize)
-                value = struct.unpack('Q', data)[0]
-                arg.flat[i] = value
-            elif (arg.dtype == np.float32):
-                elemsize = 4
-                data = data_file.read(elemsize)
-                value = struct.unpack('f', data)[0]
-                arg.flat[i] = value
-            elif (arg.dtype == np.double):
-                elemsize = 8
-                data = data_file.read(elemsize)
-                value = struct.unpack('d', data)[0]
-                arg.flat[i] = value
-
-            else:
-                raise(ValueError("Unsupported np type "+str(arg.dtype)))
+            elemsize = type_conv('nptype', 'size', arg.dtype)
+            packstr = type_conv('nptype', 'pack', arg.dtype)
+            data = data_file.read(elemsize)
+            value = struct.unpack('i', data)[0]
+            arg.flat[i] = value
     else:
         raise ValueError("Unsupported type: "+str(type(arg)))
 
