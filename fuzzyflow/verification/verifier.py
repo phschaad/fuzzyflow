@@ -29,6 +29,7 @@ from dace.sdfg.validation import InvalidSDFGError
 
 from fuzzyflow.runner import run_subprocess_precompiled
 from fuzzyflow.util import (StatusLevel,
+                            data_report_get_latest_version,
                             apply_transformation,
                             cutout_determine_symbol_constraints)
 from fuzzyflow.verification.sampling import DataSampler, SamplingStrategy
@@ -128,6 +129,17 @@ class TransformationVerifier:
 
             if status >= StatusLevel.VERBOSE:
                 print('Saving cutouts')
+
+            for sd in self._original_cutout.all_sdfgs_recursive():
+                for state in sd.states():
+                    for dn in state.data_nodes():
+                        dn.instrument = \
+                            dace.DataInstrumentationType.No_Instrumentation
+            for sd in self._cutout.all_sdfgs_recursive():
+                for state in sd.states():
+                    for dn in state.data_nodes():
+                        dn.instrument = \
+                            dace.DataInstrumentationType.No_Instrumentation
 
             if reason == FailureReason.EXCEPTION:
                 self.sdfg.save(os.path.join(self.output_dir, 'orig.sdfg'))
@@ -249,6 +261,35 @@ class TransformationVerifier:
             self._original_cutout.save(debug_save_path + '_orig.sdfg')
             cutout.save(debug_save_path + '_xformed.sdfg')
 
+        orig_in_config: Set[str] = set()
+        new_in_config: Set[str] = set()
+        output_config: Set[str] = set()
+        if strict_config and isinstance(orig_cutout, SDFGCutout):
+            orig_in_config = orig_cutout.input_config
+            output_config = orig_cutout.output_config
+        else:
+            for name, desc in orig_cutout.arrays.items():
+                if not desc.transient:
+                    orig_in_config.add(name)
+                    output_config.add(name)
+        if isinstance(cutout, SDFGCutout):
+            new_in_config = cutout.input_config
+        else:
+            for name, desc in cutout.arrays.items():
+                if not desc.transient:
+                    new_in_config.add(name)
+
+        for sd in orig_cutout.all_sdfgs_recursive():
+            for state in sd.states():
+                for dn in state.data_nodes():
+                    if dn.data in output_config:
+                        dn.instrument = dace.DataInstrumentationType.Save
+        for sd in cutout.all_sdfgs_recursive():
+            for state in sd.states():
+                for dn in state.data_nodes():
+                    if dn.data in output_config:
+                        dn.instrument = dace.DataInstrumentationType.Save
+
         t0 = time.perf_counter_ns()
         if status >= StatusLevel.DEBUG:
             print('Compiling pre-transformation cutout')
@@ -329,23 +370,6 @@ class TransformationVerifier:
 
                 if status >= StatusLevel.VERBOSE:
                     bar.write('Sampling inputs')
-                orig_in_config: Set[str] = set()
-                new_in_config: Set[str] = set()
-                output_config: Set[str] = set()
-                if strict_config and isinstance(orig_cutout, SDFGCutout):
-                    orig_in_config = orig_cutout.input_config
-                    output_config = orig_cutout.output_config
-                else:
-                    for name, desc in orig_cutout.arrays.items():
-                        if not desc.transient:
-                            orig_in_config.add(name)
-                            output_config.add(name)
-                if isinstance(cutout, SDFGCutout):
-                    new_in_config = cutout.input_config
-                else:
-                    for name, desc in cutout.arrays.items():
-                        if not desc.transient:
-                            new_in_config.add(name)
 
                 inputs = sampler.sample_inputs(
                     orig_cutout, orig_in_config, symbols_map, decay_by,
@@ -393,7 +417,7 @@ class TransformationVerifier:
                     )
                 t0 = time.perf_counter_ns()
                 ret_orig = run_subprocess_precompiled(
-                    prog_orig, orig_containers, free_symbols_map
+                    prog_orig, orig_containers, free_symbols_map, status=status
                 )
                 self._time_measurements['running_pre'].append(
                     time.perf_counter_ns() - t0
@@ -418,7 +442,8 @@ class TransformationVerifier:
                     )
                 t0 = time.perf_counter_ns()
                 ret_xformed = run_subprocess_precompiled(
-                    prog_xformed, xformed_containers, free_symbols_map
+                    prog_xformed, xformed_containers, free_symbols_map,
+                    status=status
                 )
                 self._time_measurements['running_post'].append(
                     time.perf_counter_ns() - t0
@@ -448,10 +473,26 @@ class TransformationVerifier:
                     return False
                 elif ret_orig == 0 and ret_xformed == 0:
                     resample = False
+                    orig_drep: dace.InstrumentedDataReport = \
+                        orig_cutout.get_instrumented_data()
+                    xf_drep: dace.InstrumentedDataReport = \
+                        cutout.get_instrumented_data()
+                    if orig_drep is None or xf_drep is None:
+                        print('No data reports!')
+                        self._catch_failure(
+                            FailureReason.EXCEPTION, 'No data reports', status,
+                            inputs_save, cutout_symbol_constraints,
+                            free_symbols_map
+                        )
+                        return False
                     for dat in output_config:
                         try:
-                            oval = orig_containers[dat]
-                            nval = xformed_containers[dat]
+                            oval = data_report_get_latest_version(
+                                orig_drep, dat
+                            )
+                            nval = data_report_get_latest_version(
+                                xf_drep, dat
+                            )
 
                             if isinstance(oval, sp.Basic):
                                 resample = True
@@ -613,6 +654,17 @@ class TransformationVerifier:
 
             if status >= StatusLevel.VERBOSE:
                 print('Saving cutouts')
+
+            for sd in orig_cutout.all_sdfgs_recursive():
+                for state in sd.states():
+                    for dn in state.data_nodes():
+                        dn.instrument = \
+                            dace.DataInstrumentationType.No_Instrumentation
+            for sd in cutout.all_sdfgs_recursive():
+                for state in sd.states():
+                    for dn in state.data_nodes():
+                        dn.instrument = \
+                            dace.DataInstrumentationType.No_Instrumentation
 
             cutout.save(os.path.join(self.success_dir, 'post.sdfg'))
             orig_cutout.save(os.path.join(self.success_dir, 'pre.sdfg'))

@@ -2,6 +2,7 @@
 # This file is part of FuzzyFlow, which is released under the BSD 3-Clause
 # License. For details, see the LICENSE file.
 
+from collections import deque
 import json
 from enum import Enum
 from functools import total_ordering
@@ -10,6 +11,7 @@ import sympy as sp
 from math import floor
 
 from dace import serialize
+from dace.data import ArrayLike, dtypes
 from dace.sdfg import SDFG, ScopeSubgraphView, SDFGState
 from dace.sdfg import nodes as nd
 from dace.sdfg.state import StateSubgraphView
@@ -46,6 +48,20 @@ class LoopDetection(DetectLoop, MultiStateTransformation):
 
     def apply(self, _, sdfg):
         return super().apply(_, sdfg)
+
+
+def data_report_get_latest_version(report, item) -> ArrayLike:
+        if report is None:
+            return None
+        filenames = report.files[item]
+        desc = report.sdfg.arrays[item]
+        dtype: dtypes.typeclass = desc.dtype
+        npdtype = dtype.as_numpy_dtype()
+
+        file = deque(iter(filenames), maxlen=1).pop()
+        nparr, view = report._read_array_file(file, npdtype)
+        report.loaded_values[item, -1] = nparr
+        return view
 
 
 def transformation_get_affected_nodes(

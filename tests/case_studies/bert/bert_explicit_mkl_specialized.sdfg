@@ -41776,7 +41776,7 @@
         },
         {
           "attributes": {
-            "collapse": 4,
+            "collapse": 1,
             "debuginfo": {
               "end_column": 53,
               "end_line": 132,

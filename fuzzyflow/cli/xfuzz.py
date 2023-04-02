@@ -135,7 +135,7 @@ def main():
     )
 
     valid, dt = verifier.verify(
-        args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
+        args.runs, status=StatusLevel.DEBUG, enforce_finiteness=False,
         symbol_constraints=symbol_constraints,
         data_constraints=data_constraints, minimize_input=reduce
     )
