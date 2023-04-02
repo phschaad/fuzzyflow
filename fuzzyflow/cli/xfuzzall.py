@@ -61,6 +61,13 @@ def main():
     )
 
     parser.add_argument(
+        '--maxd',
+        type=int,
+        help='<Maximum data dimension size>',
+        default=128
+    )
+
+    parser.add_argument(
         '--savepath',
         type=str,
         help='<Path to progress save file>',
@@ -200,7 +207,8 @@ def main():
             valid, _ = verifier.verify(
                 args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
                 symbol_constraints=symbol_constraints,
-                data_constraints=data_constraints, minimize_input=reduce
+                data_constraints=data_constraints, minimize_input=reduce,
+                maximum_data_dim=args.maxd
             )
             if not valid:
                 print('INVALID Transformation!')
@@ -283,11 +291,13 @@ def main():
                 match, sdfg, args.sampling_strategy, instance_out_path,
                 instance_success_path
             )
+            reduce = True if args.reduce else False
             valid, _ = verifier.verify(
                 args.runs, status=StatusLevel.DEBUG,
                 enforce_finiteness=True,
                 symbol_constraints=symbol_constraints,
-                data_constraints=data_constraints
+                data_constraints=data_constraints, minimize_input=reduce,
+                maximum_data_dim=args.maxd
             )
             if not valid:
                 print('INVALID Transformation!')

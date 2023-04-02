@@ -205,7 +205,7 @@ class TransformationVerifier:
         debug_save_path: str = None, enforce_finiteness: bool = False,
         symbol_constraints: Dict = None, data_constraints: Dict = None,
         strict_config: bool = False, use_alibi_nodes: bool = False,
-        reduce_input_config: bool = False
+        reduce_input_config: bool = False, maximum_data_dim: int = 128
     ) -> bool:
         t0 = time.perf_counter_ns()
         cutout = self.cutout(
@@ -339,7 +339,8 @@ class TransformationVerifier:
 
         t0 = time.perf_counter_ns()
         cutout_symbol_constraints = cutout_determine_symbol_constraints(
-            cutout, self.sdfg, pre_constraints=general_constraints
+            cutout, self.sdfg, pre_constraints=general_constraints,
+            max_dim=maximum_data_dim
         )
         self._time_measurements['constraints'].append(
             time.perf_counter_ns() - t0
@@ -358,7 +359,7 @@ class TransformationVerifier:
                 t0 = time.perf_counter_ns()
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
                     orig_cutout, constraints_map=cutout_symbol_constraints,
-                    maxval=256
+                    maxval=maximum_data_dim
                 )
 
                 constraints_map = None
@@ -615,7 +616,8 @@ class TransformationVerifier:
                     'potentially fuzzing externally.'
                 )
             symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
-                orig_cutout, constraints_map=cutout_symbol_constraints
+                orig_cutout, constraints_map=cutout_symbol_constraints,
+                maxval=maximum_data_dim
             )
 
             constraints_map = None
@@ -709,7 +711,7 @@ class TransformationVerifier:
         debug_save_path: str = None, enforce_finiteness: bool = False,
         symbol_constraints: Dict = None, data_constraints: Dict = None,
         strict_config: bool = False, minimize_input: bool = False,
-        use_alibi_nodes: bool = False
+        use_alibi_nodes: bool = False, maximum_data_dim: int = 128
     ) -> Tuple[bool, int]:
         with tempfile.TemporaryDirectory(
             prefix='fuzzyflow_dacecache_',
@@ -747,7 +749,8 @@ class TransformationVerifier:
                             enforce_finiteness,
                             symbol_constraints, data_constraints, strict_config,
                             use_alibi_nodes=use_alibi_nodes,
-                            reduce_input_config=minimize_input
+                            reduce_input_config=minimize_input,
+                            maximum_data_dim=maximum_data_dim
                         )
                         end_validate = time.perf_counter_ns()
                         dt = end_validate - start_validate

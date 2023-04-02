@@ -43,6 +43,13 @@ def main():
     )
 
     parser.add_argument(
+        '--maxd',
+        type=int,
+        help='<Maximum data dimension size>',
+        default=128
+    )
+
+    parser.add_argument(
         '-o',
         '--output',
         type=str,
@@ -137,7 +144,8 @@ def main():
     valid, dt = verifier.verify(
         args.runs, status=StatusLevel.DEBUG, enforce_finiteness=False,
         symbol_constraints=symbol_constraints,
-        data_constraints=data_constraints, minimize_input=reduce
+        data_constraints=data_constraints, minimize_input=reduce,
+        maximum_data_dim=args.maxd
     )
 
     print('Transformation is valid' if valid else 'INVALID Transformation!')

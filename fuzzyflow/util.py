@@ -6,12 +6,14 @@ from collections import deque
 import json
 from enum import Enum
 from functools import total_ordering
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, List, Set, Tuple, Union, Optional, Any
+from multiprocessing import shared_memory
 import sympy as sp
+import numpy as np
 from math import floor
 
 from dace import serialize
-from dace.data import ArrayLike, dtypes
+from dace.data import ArrayLike, dtypes, Array
 from dace.sdfg import SDFG, ScopeSubgraphView, SDFGState
 from dace.sdfg import nodes as nd
 from dace.sdfg.state import StateSubgraphView
@@ -312,3 +314,41 @@ def cutout_determine_symbol_constraints(
                     cutout_constraints[s] = (1, max_dim_size, 1)
 
     return cutout_constraints
+
+'''
+def make_shared_desc_array(
+        name: str, descriptor: Array,
+        original_array: Optional[ArrayLike] = None,
+        symbols: Optional[Dict[str, Any]] = None
+) -> ArrayLike:
+    symbols = symbols or {}
+
+    free_syms = set(map(str, descriptor.free_symbols)) - symbols.keys()
+    if free_syms:
+        raise NotImplementedError(
+            'Cannot make Python references to arrays ' +
+            'with undefined symbolic sizes:',
+            free_syms
+        )
+
+    def create_array(shape: Tuple[int], dtype: np.dtype, total_size: int, strides: Tuple[int]) -> ArrayLike:
+        buffer = np.ndarray([total_size], dtype=dtype)
+        view = np.ndarray(shape, dtype, buffer=buffer, strides=[s * dtype.itemsize for s in strides])
+        return view
+
+    shared_arr = shared_memory.SharedMemory(name, )
+
+    def copy_array(dst, src):
+        dst[:] = src
+
+    # Make numpy array from data descriptor
+    npdtype = descriptor.dtype.as_numpy_dtype()
+    evaluated_shape = tuple(symbolic.evaluate(s, symbols) for s in descriptor.shape)
+    evaluated_size = symbolic.evaluate(descriptor.total_size, symbols)
+    evaluated_strides = tuple(symbolic.evaluate(s, symbols) for s in descriptor.strides)
+    view = create_array(evaluated_shape, npdtype, evaluated_size, evaluated_strides)
+    if original_array is not None:
+        copy_array(view, original_array)
+
+    return view
+    '''
