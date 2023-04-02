@@ -754,12 +754,13 @@ class TransformationVerifier:
                         )
                         end_validate = time.perf_counter_ns()
                         dt = end_validate - start_validate
-                        for k, v in self._time_measurements.items():
-                            print(
-                                k + ': median ', str(np.median(v) / 1e9),
-                                's, mean ', str(np.mean(v) / 1e9),
-                                's, std ', str(np.std(v) / 1e9), 's'
-                            )
+                        if status >= StatusLevel.VERBOSE:
+                            for k, v in self._time_measurements.items():
+                                print(
+                                    k + ': median ', str(np.median(v) / 1e9),
+                                    's, mean ', str(np.mean(v) / 1e9),
+                                    's, std ', str(np.std(v) / 1e9), 's'
+                                )
                         return retval, dt
                     except Exception as e:
                         self._catch_failure(

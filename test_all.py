@@ -11,6 +11,7 @@ IGNORE_LIST = [
     'ElementWise*',
     'FPGA*',
     'MPI*',
+    'GPU*',
     'ReductionNOperation',
     'OuterProductOperation',
     'CopyToDevice',
@@ -19,57 +20,57 @@ IGNORE_LIST = [
 ]
 
 GRAPH_IGNORE_LIST = [
-    #'adi.sdfg',
-    #'arc_distance.sdfg',
-    #'atax.sdfg',
+    'adi.sdfg',
+    'arc_distance.sdfg',
+    'atax.sdfg',
     'azimint_hist.sdfg',
-    #'azimint_naive.sdfg',
-    #'bicg.sdfg',
-    #'cavity_flow.sdfg',
-    #'channel_flow.sdfg',
-    #'cholesky.sdfg',
-    #'cholesky2.sdfg',
-    #'compute.sdfg',
+    'azimint_naive.sdfg',
+    'bicg.sdfg',
+    'cavity_flow.sdfg',
+    'channel_flow.sdfg',
+    'cholesky.sdfg',
+    'cholesky2.sdfg',
+    'compute.sdfg',
     'contour_integral.sdfg',
     'conv2d_bias.sdfg', # Causes exceptions in pattern matching
-    #'correlation.sdfg',
-    #'covariance.sdfg',
+    'correlation.sdfg',
+    'covariance.sdfg',
     'crc16.sdfg',
-    #'deriche.sdfg',
-    #'doitgen.sdfg',
+    'deriche.sdfg',
+    'doitgen.sdfg',
     'durbin.sdfg',
-    #'fdtd_2d.sdfg',
+    'fdtd_2d.sdfg',
     'floyd_warshall.sdfg',
-    #'gemm.sdfg',
-    #'gemver.sdfg',
-    #'gesummv.sdfg',
-    #'go_fast.sdfg',
-    #'gramschmidt.sdfg',
-    #'hdiff.sdfg',
-    #'heat_3d.sdfg',
-    #'jacobi_1d.sdfg',
-    #'jacobi_2d.sdfg',
-    #'k2mm.sdfg',
+    'gemm.sdfg',
+    'gemver.sdfg',
+    'gesummv.sdfg',
+    'go_fast.sdfg',
+    'gramschmidt.sdfg',
+    'hdiff.sdfg',
+    'heat_3d.sdfg',
+    'jacobi_1d.sdfg',
+    'jacobi_2d.sdfg',
+    'k2mm.sdfg',
     'k3mm.sdfg',
-    #'lenet.sdfg',
-    #'lu.sdfg',
-    #'ludcmp.sdfg',
-    #'mlp.sdfg',
-    #'mvt.sdfg',
-    #'nbody.sdfg',
-    #'nussinov.sdfg',
-    #'resnet.sdfg',
+    'lenet.sdfg',
+    'lu.sdfg',
+    'ludcmp.sdfg',
+    'mlp.sdfg',
+    'mvt.sdfg',
+    'nbody.sdfg',
+    'nussinov.sdfg',
+    'resnet.sdfg',
     'scattering_self_energies.sdfg', # Causes out of memory.
-    #'seidel_2d.sdfg',
-    #'softmax.sdfg',
-    #'spmv.sdfg',
-    #'stockham_fft.sdfg',
-    #'symm.sdfg',
-    #'syr2k.sdfg',
-    #'syrk.sdfg',
+    'seidel_2d.sdfg',
+    'softmax.sdfg',
+    'spmv.sdfg',
+    'stockham_fft.sdfg',
+    'symm.sdfg',
+    'syr2k.sdfg',
+    'syrk.sdfg',
     'trisolv.sdfg',
-    #'trmm.sdfg',
-    #'vadv.sdfg',
+    'trmm.sdfg',
+    'vadv.sdfg',
 ]
 
 prefix = 'run_3'
@@ -113,10 +114,12 @@ def main():
                 )
                 verifier = ff.TransformationVerifier(
                     pattern, sdfg, output_dir=out_dir, success_dir=success_dir,
-                    build_dir_base_path='buildcache/'
+                    build_dir_base_path='/dev/shm/buildcache'
                 )
                 valid, dt = verifier.verify(
-                    n_samples=100, status=ff.StatusLevel.BAR_ONLY
+                    n_samples=100, status=ff.StatusLevel.BAR_ONLY,
+                    minimize_input=False, use_alibi_nodes=False,
+                    maximum_data_dim=64
                 )
                 print('Valid:', valid, 'Time:', dt)
                 if not valid:
@@ -130,8 +133,7 @@ def main():
             print(last_graph)
             print('-' * 80)
             with open(
-                'exception_' + str(graph_name) + '_' +
-                str(exception_nr) + '.txt', 'w'
+                'exception_' + str(graph_name) + '_' + '.txt', 'w'
             ) as f:
                 f.writelines([
                     str(e),
@@ -140,7 +142,6 @@ def main():
                     '',
                 ])
                 traceback.print_tb(e.__traceback__, file=f)
-            exception_nr += 1
 
 
 if __name__ == '__main__':
