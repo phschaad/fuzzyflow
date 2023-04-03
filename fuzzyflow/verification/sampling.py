@@ -190,7 +190,7 @@ class DataSampler:
 
     def sample_symbols_map_for(
         self, sdfg: SDFG, o_sdfg: SDFG, maxval: int = 1024,
-        constraints_map: Dict = None
+        constraints_map: Dict = None, minval: int = 0
     ) -> Tuple[Dict[str, int], Dict[str, int]]:
         cutoff = 10
 
@@ -204,7 +204,7 @@ class DataSampler:
             if k in constraints_map:
                 deferred.append((k, constraints_map[k], 0))
             else:
-                symbol_map[k] = random.randint(-maxval, maxval)
+                symbol_map[k] = random.randint(minval, maxval)
                 free_symbols_map[k] = symbol_map[k]
 
         while len(deferred) > 0:
@@ -233,11 +233,11 @@ class DataSampler:
                 if count < cutoff:
                     deferred.append((k, (low, high, step), count + 1))
                 else:
-                    symbol_map[k] = random.randint(-maxval, maxval)
+                    symbol_map[k] = random.randint(minval, maxval)
                     free_symbols_map[k] = symbol_map[k]
                     print(
                         'Warning: sampling dependent symbol between',
-                        str(-maxval), 'and', str(maxval),
+                        str(minval), 'and', str(maxval),
                         'because dependent value cannot be found'
                     )
             else:

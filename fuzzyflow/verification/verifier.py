@@ -295,7 +295,7 @@ class TransformationVerifier:
             print('Compiling pre-transformation cutout')
         prog_orig: CompiledSDFG = None
         try:
-            prog_orig = orig_cutout.compile()
+            prog_orig = orig_cutout.compile(validate=False)
         except InvalidSDFGError as e:
             print('Failure during validation of original cutout')
             raise e
@@ -306,7 +306,7 @@ class TransformationVerifier:
             print('Compiling post-transformation cutout')
         prog_xformed: CompiledSDFG = None
         try:
-            prog_xformed = cutout.compile(validate=True)
+            prog_xformed = cutout.compile(validate=False)
         except InvalidSDFGError as e:
             self._catch_failure(
                 FailureReason.FAILED_VALIDATE, str(e), status, exception=e

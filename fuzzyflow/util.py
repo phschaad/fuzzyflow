@@ -307,11 +307,9 @@ def cutout_determine_symbol_constraints(
             if isinstance(s, sp.Basic):
                 for sym in s.free_symbols:
                     s = str(sym)
-                    if s in ct.free_symbols and not s in cutout_constraints:
-                        cutout_constraints[s] = (1, max_dim_size, 1)
-            else:
-                if s in ct.free_symbols and not s in cutout_constraints:
                     cutout_constraints[s] = (1, max_dim_size, 1)
+            else:
+                cutout_constraints[s] = (1, max_dim_size, 1)
 
     return cutout_constraints
 
