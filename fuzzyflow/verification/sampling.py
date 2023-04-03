@@ -189,7 +189,8 @@ class DataSampler:
 
 
     def sample_symbols_map_for(
-        self, sdfg: SDFG, maxval: int = 1024, constraints_map: Dict = None
+        self, sdfg: SDFG, o_sdfg: SDFG, maxval: int = 1024,
+        constraints_map: Dict = None
     ) -> Tuple[Dict[str, int], Dict[str, int]]:
         cutoff = 10
 
@@ -199,7 +200,7 @@ class DataSampler:
             symbol_map[k] = int(v)
 
         deferred = deque()
-        for k in sdfg.free_symbols:
+        for k in sdfg.free_symbols.union(o_sdfg.free_symbols):
             if k in constraints_map:
                 deferred.append((k, constraints_map[k], 0))
             else:

@@ -358,7 +358,8 @@ class TransformationVerifier:
                     bar.write('Sampling symbols')
                 t0 = time.perf_counter_ns()
                 symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
-                    orig_cutout, constraints_map=cutout_symbol_constraints,
+                    orig_cutout, cutout,
+                    constraints_map=cutout_symbol_constraints,
                     maxval=maximum_data_dim
                 )
 
@@ -616,7 +617,8 @@ class TransformationVerifier:
                     'potentially fuzzing externally.'
                 )
             symbols_map, free_symbols_map = sampler.sample_symbols_map_for(
-                orig_cutout, constraints_map=cutout_symbol_constraints,
+                orig_cutout, cutout,
+                constraints_map=cutout_symbol_constraints,
                 maxval=maximum_data_dim
             )
 
@@ -742,8 +744,8 @@ class TransformationVerifier:
                     warnings.simplefilter(
                         'ignore', lineno=393, append=True
                     )
+                    start_validate = time.perf_counter_ns()
                     try:
-                        start_validate = time.perf_counter_ns()
                         retval = self._do_verify(
                             n_samples, status, debug_save_path,
                             enforce_finiteness,
@@ -766,3 +768,4 @@ class TransformationVerifier:
                         self._catch_failure(
                             FailureReason.EXCEPTION, str(e), status, exception=e
                         )
+                        return False, time.perf_counter_ns() - start_validate
