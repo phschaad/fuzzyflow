@@ -17,7 +17,6 @@ import dace.transformation.interstate as ixf
 import dace.transformation.subgraph as sxf
 import dace.transformation.passes as passes
 
-from fuzzyflow import cutout
 from fuzzyflow.verification.sampling import SamplingStrategy
 from fuzzyflow.verification.verifier import StatusLevel, TransformationVerifier
 
@@ -81,14 +80,6 @@ def main():
         default=200
     )
 
-    parser.add_argument(
-        '-c',
-        '--cutout-strategy',
-        type=cutout.CutoutStrategy,
-        choices=list(cutout.CutoutStrategy),
-        help='Strategy to use for selecting subgraph cutouts',
-        default=cutout.CutoutStrategy.SIMPLE
-    )
     parser.add_argument(
         '-s',
         '--sampling-strategy',

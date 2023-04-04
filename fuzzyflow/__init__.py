@@ -3,7 +3,6 @@
 # License. For details, see the LICENSE file.
 
 from .verification.verifier import TransformationVerifier, StatusLevel
-from .cutout import CutoutStrategy
 from .verification.sampling import SamplingStrategy
 from .util import load_transformation_from_file, data_report_get_latest_version
 from .harness_generator import sdfg2cpp

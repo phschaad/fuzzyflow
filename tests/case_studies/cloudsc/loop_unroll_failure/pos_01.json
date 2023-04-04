@@ -1,1 +1,0 @@
-{"_subgraph":{"0":28,"1":29,"2":34},"count":0,"expr_index":1,"sdfg_id":1,"state_id":-1,"transformation":"LoopUnroll","type":"PatternTransformation","docstring":" Unrolls a state machine for-loop into multiple states "}
