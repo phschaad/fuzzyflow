@@ -8,6 +8,7 @@ import os
 import warnings
 from typing import List
 import importlib
+import time
 
 from dace import serialize
 from dace.sdfg import SDFG
@@ -258,6 +259,8 @@ def main():
             'invalid_indices': []
         }
 
+        total_time = 0
+
         i = 1
         invalid = set()
         failed = set()
@@ -283,13 +286,14 @@ def main():
                 instance_success_path
             )
             reduce = True if args.reduce else False
-            valid, _ = verifier.verify(
+            valid, dt = verifier.verify(
                 args.runs, status=StatusLevel.DEBUG,
                 enforce_finiteness=True,
                 symbol_constraints=symbol_constraints,
                 data_constraints=data_constraints, minimize_input=reduce,
                 maximum_data_dim=args.maxd
             )
+            total_time += dt
             if not valid:
                 print('INVALID Transformation!')
                 invalid.add(i)
@@ -314,6 +318,8 @@ def main():
             std_failed.sort()
             for i in std_failed:
                 print(i)
+
+        print('Total time:', total_time / 1e9, 'seconds')
 
 
 if __name__ == '__main__':

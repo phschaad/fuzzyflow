@@ -117,12 +117,16 @@ class TransformationVerifier:
             with open(os.path.join(self.output_dir, reason.value), 'w') as f:
                 if details:
                     f.writelines([
-                        'Reason: ' + reason.value + '\n', 'Details: ', details
+                        'Reason: ' + reason.value + '\n', 'Details: \n',
+                        details, '\n'
                     ])
                 else:
                     f.writelines([
-                        'Reason:' + reason.value + '\n', 'Details: -'
+                        'Reason:' + reason.value + '\n', 'Details: \n-\n'
                     ])
+
+                if iteration is not None:
+                    f.writelines(['Iteration: ' + str(iteration) + '\n'])
 
                 if exception is not None:
                     traceback.print_tb(exception.__traceback__, file=f)
@@ -467,7 +471,7 @@ class TransformationVerifier:
                         f'Exit code (${ret_xformed}) does not match oringinal' +
                         f' exit code (${ret_orig})',
                         status, inputs_save, cutout_symbol_constraints,
-                        free_symbols_map
+                        free_symbols_map, iteration=i
                     )
                     self._time_measurements['comparing'].append(
                         time.perf_counter_ns() - t0
@@ -484,7 +488,7 @@ class TransformationVerifier:
                         self._catch_failure(
                             FailureReason.EXCEPTION, 'No data reports', status,
                             inputs_save, cutout_symbol_constraints,
-                            free_symbols_map
+                            free_symbols_map, iteration=i
                         )
                         return False
                     for dat in output_config:
@@ -518,7 +522,7 @@ class TransformationVerifier:
                                         f'Mismatching results for ${dat}',
                                         status, inputs_save,
                                         cutout_symbol_constraints,
-                                        free_symbols_map
+                                        free_symbols_map, iteration=i
                                     )
                                     self._time_measurements['comparing'].append(
                                         time.perf_counter_ns() - t0
@@ -535,7 +539,7 @@ class TransformationVerifier:
                                         f'Mismatching results for ${dat}',
                                         status, inputs_save,
                                         cutout_symbol_constraints,
-                                        free_symbols_map
+                                        free_symbols_map, iteration=i
                                     )
                                     self._time_measurements['comparing'].append(
                                         time.perf_counter_ns() - t0
@@ -756,7 +760,7 @@ class TransformationVerifier:
                         )
                         end_validate = time.perf_counter_ns()
                         dt = end_validate - start_validate
-                        if status >= StatusLevel.VERBOSE:
+                        if status >= StatusLevel.DEBUG:
                             for k, v in self._time_measurements.items():
                                 print(
                                     k + ': median ', str(np.median(v) / 1e9),

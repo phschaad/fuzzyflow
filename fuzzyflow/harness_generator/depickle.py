@@ -5,12 +5,13 @@ import copy
 
 #from fuzzyflow.harness_generator import sdfg2cpp
 
-path_prefix = '.testdata_case_studies/cloudsc/GPUTransformSDFG/fails/GPUTransformSDFG_61/'
+path_prefix = '.testdata_void/fails/'
 
 
 pre = dace.SDFG.from_file(path_prefix + 'pre.sdfg')
 post = dace.SDFG.from_file(path_prefix + 'post.sdfg')
 
+'''
 NPROMA = KLON = np.random.randint(2, 10)
 NCLV = np.random.randint(10, 128)
 KLEV = 137
@@ -53,9 +54,19 @@ inputs = {
 }
 
 input_copies = copy.deepcopy(inputs)
-
-
 '''
+
+#with open(path_prefix + 'symbols', 'wb') as f:
+#    symbols = {
+#        'B': 6,
+#        'H': 16,
+#        'P': 64,
+#        'SM': 64,
+#        'N': 64,
+#        'emb': 64,
+#    }
+#    pickle.dump(symbols, f, pickle.HIGHEST_PROTOCOL)
+
 inputs = None
 symbols = None
 constraints = None
@@ -67,7 +78,6 @@ with open(path_prefix + 'symbols', 'rb') as f:
     symbols = pickle.load(f)
 
 input_copies = copy.deepcopy(inputs)
-'''
 
 with dace.config.temporary_config():
     dace.config.Config.set('compiler', 'cpu', 'args', value='-std=c++14 -O0 -Wall -fPIC -Wno-unused-parameter -Wno-unused-label -fopenmp')
