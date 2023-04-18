@@ -197,7 +197,7 @@ def main():
                 instance_out_path, instance_success_path
             )
             valid, _ = verifier.verify(
-                args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
+                args.runs, enforce_finiteness=True,
                 symbol_constraints=symbol_constraints,
                 data_constraints=data_constraints, minimize_input=reduce,
                 maximum_data_dim=args.maxd
@@ -220,6 +220,8 @@ def main():
             )
             for i in file_contents['invalid_indices']:
                 print(str(i))
+            print('Failing cases were saved to', str(output_dir))
+            print('Perform triage to find false positives')
     else:
         xf_split = xfparam.split('.')
         xf_type = xf_split[0]
@@ -287,8 +289,7 @@ def main():
             )
             reduce = True if args.reduce else False
             valid, dt = verifier.verify(
-                args.runs, status=StatusLevel.DEBUG,
-                enforce_finiteness=True,
+                args.runs, enforce_finiteness=True,
                 symbol_constraints=symbol_constraints,
                 data_constraints=data_constraints, minimize_input=reduce,
                 maximum_data_dim=args.maxd
@@ -312,6 +313,8 @@ def main():
             std_invalid.sort()
             for i in std_invalid:
                 print(i)
+            print('Failing cases were saved to', str(output_dir))
+            print('Perform triage to find false positives')
         if len(failed) > 0:
             print('Failed in the following', len(failed), 'instances:')
             std_failed = list(failed)

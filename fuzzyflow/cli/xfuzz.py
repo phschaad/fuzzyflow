@@ -138,11 +138,11 @@ def main():
     reduce = True if args.reduce else False
     verifier = TransformationVerifier(
         xform, sdfg, args.sampling_strategy, output_dir=output_dir,
-        success_dir=success_dir
+        success_dir=success_dir, status=StatusLevel.BAR_ONLY,
     )
 
     valid, dt = verifier.verify(
-        args.runs, status=StatusLevel.DEBUG, enforce_finiteness=False,
+        args.runs, enforce_finiteness=False,
         symbol_constraints=symbol_constraints,
         data_constraints=data_constraints, minimize_input=reduce,
         maximum_data_dim=args.maxd

@@ -53,7 +53,7 @@ def run_subprocess_precompiled(
         print('Runner joined')
 
     if process.exitcode != 0:
-        print('Error occured in execution')
+        #print('Error occured in execution')
         return process.exitcode
     if process.exception:
         error, trace = process.exception
@@ -133,7 +133,7 @@ def run_subprocess(
             pass
 
     if process.exitcode != 0:
-        print('Error occured in execution')
+        #print('Error occured in execution')
         return process.exitcode
     if process.exception:
         error, trace = process.exception

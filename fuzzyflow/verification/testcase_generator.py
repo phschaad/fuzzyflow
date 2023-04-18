@@ -182,15 +182,18 @@ class TestCaseGenerator:
 
 
     def save_failure_case(
-        self, reason: FailureReason, details: str, pre: SDFG, post: SDFG,
-        original_sdfg: SDFG,
+        self, reason: FailureReason, details: str,
         xform: Union[SubgraphTransformation, PatternTransformation],
+        pre: Optional[SDFG] = None, post: Optional[SDFG] = None,
+        original_sdfg: Optional[SDFG] = None,
         iteration: Optional[int] = None,
         exception: Optional[Exception] = None,
         inputs: Optional[dict] = None,
         symbol_constraints: Optional[dict] = None,
         symbols: Optional[dict] = None
     ) -> None:
+        if self._failure_dir is None:
+            return
         os.makedirs(self._failure_dir, exist_ok=True)
 
         # Save additional information about the failure.
@@ -215,16 +218,18 @@ class TestCaseGenerator:
             self._save_original_sdfg(self._failure_dir, original_sdfg)
             self._save_transformation(self._failure_dir, xform)
         else:
-            self._save_cutouts(self._failure_dir, pre, post)
+            if pre is not None and post is not None:
+                self._save_cutouts(self._failure_dir, pre, post)
             self._save_inputs_dbg(
                 self._failure_dir, inputs, symbol_constraints,
                 free_symbols_map=symbols
             )
             self._save_transformation(self._failure_dir, xform)
-            self._save_harness(
-                self._failure_dir, symbol_constraints, pre, post, inputs,
-                symbols
-            )
+            if pre is not None and post is not None:
+                self._save_harness(
+                    self._failure_dir, symbol_constraints, pre, post, inputs,
+                    symbols
+                )
 
 
     def save_success_case(
@@ -234,7 +239,10 @@ class TestCaseGenerator:
         cutout_symbol_constraints: Optional[dict] = None,
         data_constraints: Optional[dict] = None, maximum_data_dim: int = 128
     ) -> None:
+        if self._success_dir is None:
+            return
         os.makedirs(self._success_dir, exist_ok=True)
+
         inputs, free_symbols_map = self._sample_valid_inputs(
             pre, post, cutout_symbol_constraints,
             maximum_data_dim=maximum_data_dim,

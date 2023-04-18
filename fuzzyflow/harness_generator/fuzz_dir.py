@@ -8,10 +8,9 @@ import subprocess
 from dace import dtypes
 
 ## PATHS ## (fix those)
-DACE_PATH = "/home/timos/Work/dace/"
-AFL_PATH = "/home/timos/Work/AFLplusplus/"
-sdfg2cpp_path = "/home/timos/Work/fuzzyflow/fuzzyflow/harness_generator/sdfg2cpp.py"
-depickler_path = "/home/timos/Work/fuzzyflow/fuzzyflow/harness_generator/depickle.py"
+DACE_PATH = "/app/dace/"
+sdfg2cpp_path = "/app/fuzzyflow/fuzzyflow/harness_generator/sdfg2cpp.py"
+depickler_path = "/app/fuzzyflow/fuzzyflow/harness_generator/depickle.py"
 
 def remove_inst(sdfg):
     for s in sdfg.states():
@@ -58,7 +57,7 @@ def fuzz(compile_only=False):
         pass
     else:
         # now lets use afl
-        compiler = AFL_PATH+"afl-g++-fast"
+        compiler = "afl-g++-fast"
         compile_cmd = " ".join([compiler, flags, "harness.cpp", src_pre, src_post, inc_pre, inc_post, inc_dace, inc_cuda, libs_cuda, "-o", "harness"])
         print(compile_cmd)
         os.system(compile_cmd)
@@ -67,7 +66,7 @@ def fuzz(compile_only=False):
         os.system("cp harness.dat afl_seeds")
         os.system("mkdir afl_finds")
         tasks = []
-        afl_cmd = AFL_PATH+"afl-fuzz -i afl_seeds -o afl_finds -t 10000 -V 60 -M fuzzer0 -- ./harness @@ out1.dat out2.dat"
+        afl_cmd = "afl-fuzz -i afl_seeds -o afl_finds -t 10000 -V 60 -M fuzzer0 -- ./harness @@ out1.dat out2.dat"
         p = subprocess.Popen(afl_cmd, shell=True)
         tasks += [p]
         #for t in range(1, 7):
@@ -76,8 +75,8 @@ def fuzz(compile_only=False):
         #    tasks += [p]
         for t in tasks:
             t.wait()
-            
-        
+
+
 
 def traverse_dir(path):
     fuzzdirs = []
@@ -86,7 +85,7 @@ def traverse_dir(path):
             newpath = (os.path.join(root, dirname))
             if os.path.isfile(os.path.join(os.getcwd(), newpath, "harness.cpp")):
                 fuzzdirs += [newpath]
-    
+
     for f in fuzzdirs:
         print("Will fuzz in "+f)
         origwd = os.getcwd()

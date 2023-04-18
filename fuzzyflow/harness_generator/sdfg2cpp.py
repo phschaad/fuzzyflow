@@ -1,6 +1,7 @@
 import numpy as np
 import dace
 from dace.symbolic import symstr
+import sympy as sp
 
 import struct
 
@@ -208,7 +209,7 @@ def generate_call(out_file, sdfg, args, kwargs):
   print(", ".join(args), file=out_file, end="")
   print(");", file=out_file)
   print("  __dace_exit_"+sdfg.name+"("+sdfg.name+"_handle);", file=out_file)
-  
+
 
 
 def generate_headers(code_file, sdfg1, sdfg2):
@@ -230,6 +231,9 @@ def generate_headers(code_file, sdfg1, sdfg2):
     print("FILE* repro = NULL;", file=code_file)
     print("int dacefuzz_seed;", file=code_file)
     print("", file=code_file)
+
+    for c, v in sdfg1.constants.items():
+        print("constexpr long long "+c+" = "+str(v)+";", file=code_file)
 
 def generate_write_back(code_file, datafile, sdfg, args, kwargs):
     for arg in args:

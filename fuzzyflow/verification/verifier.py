@@ -77,7 +77,7 @@ class TransformationVerifier:
         self.sampler = DataSampler(sampling_strategy, seed=12121)
         self.status = status
         self.tc_generator = TestCaseGenerator(
-            self.success_dir, self.status, self.sampler
+            self.success_dir, self.output_dir, self.status, self.sampler
         )
 
     def cutout(
@@ -121,12 +121,14 @@ class TransformationVerifier:
         except InvalidSDFGError as e:
             self.tc_generator.save_failure_case(
                 FailureReason.FAILED_VALIDATE, str(e), exception=e,
+                original_sdfg=self.sdfg,
                 pre=orig_cutout, post=cutout, xform=self.xform
             )
             return False
         except Exception as e:
             self.tc_generator.save_failure_case(
                 FailureReason.FAILED_TO_APPLY, str(e), exception=e,
+                original_sdfg=self.sdfg,
                 pre=orig_cutout, post=cutout, xform=self.xform
             )
             return False
@@ -207,13 +209,15 @@ class TransformationVerifier:
         except InvalidSDFGError as e:
             self.tc_generator.save_failure_case(
                 FailureReason.FAILED_VALIDATE, str(e), exception=e,
-                pre=orig_cutout, post=cutout, xform=self.xform
+                pre=orig_cutout, post=cutout, original_sdfg=self.sdfg,
+                xform=self.xform
             )
             return False
         except Exception as e:
             self.tc_generator.save_failure_case(
                 FailureReason.COMPILATION_FAILURE, str(e), exception=e,
-                pre=orig_cutout, post=cutout, xform=self.xform
+                pre=orig_cutout, post=cutout, original_sdfg=self.sdfg,
+                xform=self.xform
             )
             return False
         if self.status >= StatusLevel.DEBUG:
@@ -367,6 +371,7 @@ class TransformationVerifier:
                         f'Exit code (${ret_xformed}) does not match oringinal' +
                         f' exit code (${ret_orig})',
                         pre=orig_cutout, post=cutout, xform=self.xform,
+                        original_sdfg=self.sdfg,
                         iteration=i, inputs=inputs_save,
                         symbols=free_symbols_map,
                         symbol_constraints=cutout_symbol_constraints
@@ -422,6 +427,7 @@ class TransformationVerifier:
                                         f'Mismatching results for ${dat}',
                                         pre=orig_cutout, post=cutout,
                                         xform=self.xform,
+                                        original_sdfg=self.sdfg,
                                         iteration=i, inputs=inputs_save,
                                         symbols=free_symbols_map,
                                         symbol_constraints=cutout_symbol_constraints
@@ -441,6 +447,7 @@ class TransformationVerifier:
                                         f'Mismatching results for ${dat}',
                                         pre=orig_cutout, post=cutout,
                                         xform=self.xform,
+                                        original_sdfg=self.sdfg,
                                         iteration=i, inputs=inputs_save,
                                         symbols=free_symbols_map,
                                         symbol_constraints=cutout_symbol_constraints
