@@ -53,7 +53,7 @@ def run_subprocess_precompiled(
         print('Runner joined')
 
     if process.exitcode != 0:
-        print('Error occured in execution')
+        #print('Error occured in execution')
         return process.exitcode
     if process.exception:
         error, trace = process.exception
@@ -80,6 +80,12 @@ def _subprocess_runner_precompiled(
 
     containers: Dict[str, Union[np.number, np.ndarray]] = dict()
 
+    reconstructed_symbols = {}
+    for k, v in symbols.items():
+        reconstructed_symbols[k] = v
+    for k, v in sdfg.constants.items():
+        reconstructed_symbols[k] = v
+
     if status >= StatusLevel.VERBOSE:
         print('Deserializing continers', flush=True)
     for k, v in containers_serialized.items():
@@ -87,7 +93,7 @@ def _subprocess_runner_precompiled(
         if isinstance(array, Scalar):
             containers[k] = v
         else:
-            view = make_array_from_descriptor(array, v, symbols)
+            view = make_array_from_descriptor(array, v, reconstructed_symbols)
             if isinstance(array, Array) and array.alignment:
                 containers[k] = aligned_ndarray(view, array.alignment)
             else:
@@ -127,7 +133,7 @@ def run_subprocess(
             pass
 
     if process.exitcode != 0:
-        print('Error occured in execution')
+        #print('Error occured in execution')
         return process.exitcode
     if process.exception:
         error, trace = process.exception

@@ -7,6 +7,8 @@ import json
 import os
 import warnings
 from typing import List
+import importlib
+import time
 
 from dace import serialize
 from dace.sdfg import SDFG
@@ -16,7 +18,6 @@ import dace.transformation.interstate as ixf
 import dace.transformation.subgraph as sxf
 import dace.transformation.passes as passes
 
-from fuzzyflow import cutout
 from fuzzyflow.verification.sampling import SamplingStrategy
 from fuzzyflow.verification.verifier import StatusLevel, TransformationVerifier
 
@@ -41,6 +42,12 @@ def main():
     )
 
     parser.add_argument(
+        '--success-dir',
+        type=str,
+        help='<PATH TO SUCCESS CASE FOLDER>',
+    )
+
+    parser.add_argument(
         '-t',
         '--transformation',
         type=str,
@@ -51,6 +58,13 @@ def main():
         '--restore',
         action=argparse.BooleanOptionalAction,
         help='Restore from progress save file'
+    )
+
+    parser.add_argument(
+        '--maxd',
+        type=int,
+        help='<Maximum data dimension size>',
+        default=128
     )
 
     parser.add_argument(
@@ -68,20 +82,18 @@ def main():
     )
 
     parser.add_argument(
-        '-c',
-        '--cutout-strategy',
-        type=cutout.CutoutStrategy,
-        choices=list(cutout.CutoutStrategy),
-        help='Strategy to use for selecting subgraph cutouts',
-        default=cutout.CutoutStrategy.SIMPLE
-    )
-    parser.add_argument(
         '-s',
         '--sampling-strategy',
         type=SamplingStrategy,
         choices=list(SamplingStrategy),
         help='Strategy to use for sampling testing data',
         default=SamplingStrategy.SIMPLE_UNIFORM
+    )
+
+    parser.add_argument(
+        '--reduce',
+        action=argparse.BooleanOptionalAction,
+        help='Reduce the input configuration',
     )
 
     parser.add_argument(
@@ -140,7 +152,16 @@ def main():
     if args.output is not None:
         if not os.path.exists(args.output):
             os.makedirs(args.output, exist_ok=True)
-    output_dir = args.output if os.path.exists(args.output) else None
+    output_dir = args.output if (
+        args.output is not None and os.path.exists(args.output)
+    ) else None
+
+    if args.success_dir is not None:
+        if not os.path.exists(args.success_dir):
+            os.makedirs(args.success_dir, exist_ok=True)
+    success_dir = args.success_dir if (
+        args.success_dir is not None and os.path.exists(args.success_dir)
+    ) else None
 
     if args.restore and os.path.exists(progress_save_path):
         savefile = open(progress_save_path, 'r')
@@ -165,14 +186,21 @@ def main():
                 instance_out_path = os.path.join(
                     output_dir, xf_name + '_' + str(i)
                 )
+            instance_success_path = None
+            if success_dir:
+                instance_success_path = os.path.join(
+                    success_dir, xf_name + '_' + str(i)
+                )
+            reduce = True if args.reduce else False
             verifier = TransformationVerifier(
-                match, sdfg, args.cutout_strategy, args.sampling_strategy,
-                instance_out_path
+                match, sdfg, args.sampling_strategy,
+                instance_out_path, instance_success_path
             )
-            valid = verifier.verify(
-                args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
+            valid, _ = verifier.verify(
+                args.runs, enforce_finiteness=True,
                 symbol_constraints=symbol_constraints,
-                data_constraints=data_constraints
+                data_constraints=data_constraints, minimize_input=reduce,
+                maximum_data_dim=args.maxd
             )
             if not valid:
                 print('INVALID Transformation!')
@@ -192,6 +220,8 @@ def main():
             )
             for i in file_contents['invalid_indices']:
                 print(str(i))
+            print('Failing cases were saved to', str(output_dir))
+            print('Perform triage to find false positives')
     else:
         xf_split = xfparam.split('.')
         xf_type = xf_split[0]
@@ -215,6 +245,10 @@ def main():
             print('Transformation type', xf_type, 'has no member', xf_name)
             exit(1)
 
+        # Ensure the transformation is loaded and can properly by matched
+        #importlib.import_module(
+        #    'dace.transformation.' + xf_type + '.' + xf_name
+        #)
         matches: List = list(
             match_patterns(sdfg, getattr(base_cls, xf_name))
         )
@@ -227,6 +261,8 @@ def main():
             'invalid_indices': []
         }
 
+        total_time = 0
+
         i = 1
         invalid = set()
         failed = set()
@@ -235,33 +271,36 @@ def main():
             if args.skip_n:
                 if i <= args.skip_n:
                     print('Skipping')
-                    i += i
+                    i += 1
                     continue
             instance_out_path = None
             if output_dir:
                 instance_out_path = os.path.join(
                     output_dir, xf_name + '_' + str(i)
                 )
-            verifier = TransformationVerifier(
-                match, sdfg, args.cutout_strategy, args.sampling_strategy,
-                instance_out_path
-            )
-            try:
-                valid = verifier.verify(
-                    args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
-                    symbol_constraints=symbol_constraints,
-                    data_constraints=data_constraints
+            instance_success_path = None
+            if success_dir:
+                instance_success_path = os.path.join(
+                    success_dir, xf_name + '_' + str(i)
                 )
-                if not valid:
-                    print('INVALID Transformation!')
-                    invalid.add(i)
-                    file_contents['invalid_indices'].append(i)
-                else:
-                    print('Transformation is valid')
-            except Exception as e:
-                failed.add(i)
-                print('Failed to validate with exception')
-                print(e)
+            verifier = TransformationVerifier(
+                match, sdfg, args.sampling_strategy, instance_out_path,
+                instance_success_path
+            )
+            reduce = True if args.reduce else False
+            valid, dt = verifier.verify(
+                args.runs, enforce_finiteness=True,
+                symbol_constraints=symbol_constraints,
+                data_constraints=data_constraints, minimize_input=reduce,
+                maximum_data_dim=args.maxd
+            )
+            total_time += dt
+            if not valid:
+                print('INVALID Transformation!')
+                invalid.add(i)
+                file_contents['invalid_indices'].append(i)
+            else:
+                print('Transformation is valid')
             i += 1
 
             file_contents['index'] = i
@@ -274,12 +313,16 @@ def main():
             std_invalid.sort()
             for i in std_invalid:
                 print(i)
+            print('Failing cases were saved to', str(output_dir))
+            print('Perform triage to find false positives')
         if len(failed) > 0:
             print('Failed in the following', len(failed), 'instances:')
             std_failed = list(failed)
             std_failed.sort()
             for i in std_failed:
                 print(i)
+
+        print('Total time:', total_time / 1e9, 'seconds')
 
 
 if __name__ == '__main__':

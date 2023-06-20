@@ -9,7 +9,6 @@ import warnings
 
 from dace.sdfg import SDFG
 
-from fuzzyflow import cutout
 from fuzzyflow.util import StatusLevel, load_transformation_from_file
 from fuzzyflow.verification.sampling import SamplingStrategy
 from fuzzyflow.verification.verifier import TransformationVerifier
@@ -44,13 +43,31 @@ def main():
     )
 
     parser.add_argument(
-        '-c',
-        '--cutout-strategy',
-        type=cutout.CutoutStrategy,
-        choices=list(cutout.CutoutStrategy),
-        help='Strategy to use for selecting subgraph cutouts',
-        default=cutout.CutoutStrategy.SIMPLE
+        '--maxd',
+        type=int,
+        help='<Maximum data dimension size>',
+        default=128
     )
+
+    parser.add_argument(
+        '-o',
+        '--output',
+        type=str,
+        help='<PATH TO OUTPUT FOLDER>',
+    )
+
+    parser.add_argument(
+        '--success-dir',
+        type=str,
+        help='<PATH TO SUCCESS CASE FOLDER>',
+    )
+
+    parser.add_argument(
+        '--reduce',
+        action=argparse.BooleanOptionalAction,
+        help='Reduce the input configuration',
+    )
+
     parser.add_argument(
         '-s',
         '--sampling-strategy',
@@ -84,6 +101,16 @@ def main():
         print('Transformation file', xform_path, 'not found')
         exit(1)
 
+    if args.output is not None:
+        if not os.path.exists(args.output):
+            os.makedirs(args.output, exist_ok=True)
+    output_dir = args.output if os.path.exists(args.output) else None
+
+    if args.success_dir is not None:
+        if not os.path.exists(args.success_dir):
+            os.makedirs(args.success_dir, exist_ok=True)
+    success_dir = args.success_dir if os.path.exists(args.success_dir) else None
+
     # Load and validate SDFG. Invalid SDFGs should fail this process.
     sdfg = SDFG.from_file(sdfg_path)
     sdfg.validate()
@@ -108,16 +135,21 @@ def main():
         'ignore', message='.*already loaded, renaming file.*'
     )
 
+    reduce = True if args.reduce else False
     verifier = TransformationVerifier(
-        xform, sdfg, args.cutout_strategy, args.sampling_strategy
+        xform, sdfg, args.sampling_strategy, output_dir=output_dir,
+        success_dir=success_dir, status=StatusLevel.BAR_ONLY,
     )
 
-    valid = verifier.verify(
-        args.runs, status=StatusLevel.DEBUG, enforce_finiteness=True,
-        symbol_constraints=symbol_constraints, data_constraints=data_constraints
+    valid, dt = verifier.verify(
+        args.runs, enforce_finiteness=False,
+        symbol_constraints=symbol_constraints,
+        data_constraints=data_constraints, minimize_input=reduce,
+        maximum_data_dim=args.maxd
     )
 
     print('Transformation is valid' if valid else 'INVALID Transformation!')
+    print('Time taken (s):', dt / 1e9)
 
 
 if __name__ == '__main__':

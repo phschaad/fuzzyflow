@@ -17,6 +17,8 @@ from dace.libraries.standard.memory import aligned_ndarray
 from sympy.core import Expr
 from sympy.core.numbers import Number
 
+from fuzzyflow.util import StatusLevel
+
 
 class SamplingStrategy(Enum):
     SIMPLE_UNIFORM = 'SIMPLE_UNIFORM'
@@ -29,11 +31,13 @@ class DataSampler:
 
     strategy: SamplingStrategy = None
     random_state: np.random.RandomState = None
+    status: StatusLevel = StatusLevel.BAR_ONLY
 
     def __init__(
         self,
         strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM,
-        seed: int = None
+        seed: int = None,
+        status: StatusLevel = StatusLevel.BAR_ONLY
     ):
         self.strategy = strategy
         if seed is not None:
@@ -189,8 +193,9 @@ class DataSampler:
 
 
     def sample_symbols_map_for(
-        self, sdfg: SDFG, maxval: int = 128, constraints_map: Dict = None
-    ) -> Dict[str, int]:
+        self, sdfg: SDFG, o_sdfg: SDFG, maxval: int = 1024,
+        constraints_map: Dict = None, minval: int = 0
+    ) -> Tuple[Dict[str, int], Dict[str, int]]:
         cutoff = 10
 
         symbol_map = dict()
@@ -199,42 +204,47 @@ class DataSampler:
             symbol_map[k] = int(v)
 
         deferred = deque()
-        for k in sdfg.free_symbols:
+        for k in sdfg.free_symbols.union(o_sdfg.free_symbols):
             if k in constraints_map:
                 deferred.append((k, constraints_map[k], 0))
             else:
-                symbol_map[k] = random.randint(1, maxval)
+                symbol_map[k] = random.randint(minval, maxval)
                 free_symbols_map[k] = symbol_map[k]
 
         while len(deferred) > 0:
             k, (low, high, step), count = deferred.popleft()
             retlow = None
             if isinstance(low, symbol):
-                if low in symbol_map:
-                    retlow = symbol_map[low]
+                if str(low) in symbol_map:
+                    retlow = symbol_map[str(low)]
             elif isinstance(low, Expr):
                 res = low.subs(symbol_map)
                 if isinstance(res, Number) and res.is_Integer:
                     retlow = int(res)
+            elif isinstance(low, int):
+                retlow = low
             rethigh = None
             if isinstance(high, symbol):
-                if high in symbol_map:
-                    rethigh = symbol_map[low]
+                if str(high) in symbol_map:
+                    rethigh = symbol_map[str(high)]
             elif isinstance(high, Expr):
                 res = high.subs(symbol_map)
                 if isinstance(res, Number) and res.is_Integer:
                     rethigh = int(res)
-            if retlow is None or rethigh is None:
+            elif isinstance(high, int):
+                rethigh = high
+            if retlow is None or rethigh is None or retlow > rethigh:
                 if count < cutoff:
                     deferred.append((k, (low, high, step), count + 1))
                 else:
-                    symbol_map[k] = random.randint(1, maxval)
+                    symbol_map[k] = random.randint(minval, maxval)
                     free_symbols_map[k] = symbol_map[k]
-                    print(
-                        'Warning: sampling dependent symbol between', str(1),
-                        'and', str(maxval),
-                        'because dependent value cannot be found'
-                    )
+                    if self.status >= StatusLevel.DEBUG:
+                        print(
+                            'Warning: sampling dependent symbol between',
+                            str(minval), 'and', str(maxval),
+                            'because dependent value cannot be found'
+                        )
             else:
                 symbol_map[k] = random.randint(retlow, rethigh)
                 free_symbols_map[k] = symbol_map[k]
