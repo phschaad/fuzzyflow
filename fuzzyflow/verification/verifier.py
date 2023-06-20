@@ -74,7 +74,7 @@ class TransformationVerifier:
         self.output_dir = output_dir
         self.success_dir = success_dir
         self._build_dir_base_path = build_dir_base_path
-        self.sampler = DataSampler(sampling_strategy, seed=12121)
+        self.sampler = DataSampler(sampling_strategy, seed=12121, status=status)
         self.status = status
         self.tc_generator = TestCaseGenerator(
             self.success_dir, self.output_dir, self.status, self.sampler
@@ -570,6 +570,16 @@ class TransformationVerifier:
                     # Ignore typecasting warnings.
                     warnings.simplefilter(
                         'ignore', lineno=393, append=True
+                    )
+                    # Ignore uninitialized transient warnings.
+                    warnings.filterwarnings(
+                        'ignore', message='.*uninitialized transient.*',
+                        append=True
+                    )
+                    # Ignore unused properties warnings.
+                    warnings.filterwarnings(
+                        'ignore', message='.*Unused properties.*',
+                        append=True
                     )
                     start_validate = time.perf_counter_ns()
                     try:

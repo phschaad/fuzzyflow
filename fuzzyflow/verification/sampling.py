@@ -17,6 +17,8 @@ from dace.libraries.standard.memory import aligned_ndarray
 from sympy.core import Expr
 from sympy.core.numbers import Number
 
+from fuzzyflow.util import StatusLevel
+
 
 class SamplingStrategy(Enum):
     SIMPLE_UNIFORM = 'SIMPLE_UNIFORM'
@@ -29,11 +31,13 @@ class DataSampler:
 
     strategy: SamplingStrategy = None
     random_state: np.random.RandomState = None
+    status: StatusLevel = StatusLevel.BAR_ONLY
 
     def __init__(
         self,
         strategy: SamplingStrategy = SamplingStrategy.SIMPLE_UNIFORM,
-        seed: int = None
+        seed: int = None,
+        status: StatusLevel = StatusLevel.BAR_ONLY
     ):
         self.strategy = strategy
         if seed is not None:
@@ -235,11 +239,12 @@ class DataSampler:
                 else:
                     symbol_map[k] = random.randint(minval, maxval)
                     free_symbols_map[k] = symbol_map[k]
-                    print(
-                        'Warning: sampling dependent symbol between',
-                        str(minval), 'and', str(maxval),
-                        'because dependent value cannot be found'
-                    )
+                    if self.status >= StatusLevel.DEBUG:
+                        print(
+                            'Warning: sampling dependent symbol between',
+                            str(minval), 'and', str(maxval),
+                            'because dependent value cannot be found'
+                        )
             else:
                 symbol_map[k] = random.randint(retlow, rethigh)
                 free_symbols_map[k] = symbol_map[k]
