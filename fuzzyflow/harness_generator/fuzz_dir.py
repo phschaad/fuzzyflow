@@ -7,7 +7,6 @@ import dace
 import subprocess
 from dace import dtypes
 
-## PATHS ## (fix those)
 DACE_PATH = "/app/dace/"
 sdfg2cpp_path = "/app/fuzzyflow/fuzzyflow/harness_generator/sdfg2cpp.py"
 depickler_path = "/app/fuzzyflow/fuzzyflow/harness_generator/depickle.py"
@@ -85,6 +84,9 @@ def traverse_dir(path):
             newpath = (os.path.join(root, dirname))
             if os.path.isfile(os.path.join(os.getcwd(), newpath, "harness.cpp")):
                 fuzzdirs += [newpath]
+
+    if fuzzdirs == []:
+        fuzzdirs = [path]
 
     for f in fuzzdirs:
         print("Will fuzz in "+f)

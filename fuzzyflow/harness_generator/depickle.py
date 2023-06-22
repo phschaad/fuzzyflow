@@ -2,70 +2,13 @@ import pickle
 import dace
 import numpy as np
 import copy
+import fuzzyflow.harness_generator.sdfg2cpp as sdfg2cpp
 
-#from fuzzyflow.harness_generator import sdfg2cpp
-
-path_prefix = '.testdata_void/fails/'
+path_prefix = './'
 
 
 pre = dace.SDFG.from_file(path_prefix + 'pre.sdfg')
 post = dace.SDFG.from_file(path_prefix + 'post.sdfg')
-
-'''
-NPROMA = KLON = np.random.randint(2, 10)
-NCLV = np.random.randint(10, 128)
-KLEV = 137
-
-KFLDX = np.random.randint(1)
-NCLDQI = np.random.randint(1)
-NCLDQL = np.random.randint(1)
-NCLDQT = np.random.randint(1)
-NCLDQR = np.random.randint(1)
-NCLDQS = np.random.randint(1)
-NCLDQV = np.random.randint(1)
-
-_for_it_24 = np.random.randint(1, KLEV)
-
-ZFALLSINK = np.random.rand(KLON, NCLV)
-ZQXN = np.random.rand(KLON, NCLV)
-ZRDTGDP = np.random.rand(KLON)
-ZPFPLSX = np.random.rand(KLON, KLEV + 1, NCLV)
-
-symbols = {
-    'NPROMA': NPROMA,
-    'KLON': KLON,
-    'NCLV': NCLV,
-    'KLEV': KLEV,
-    'KFLDX': KFLDX,
-    'NCLDQI': NCLDQI,
-    'NCLDQL': NCLDQL,
-    'NCLDQT': NCLDQT,
-    'NCLDQS': NCLDQS,
-    'NCLDQV': NCLDQV,
-    'NCLDQR': NCLDQR,
-    '_for_it_24': _for_it_24,
-}
-
-inputs = {
-    'ZFALLSINK': ZFALLSINK,
-    'ZQXN': ZQXN,
-    'ZRDTGDP': ZRDTGDP,
-    'ZPFPLSX': ZPFPLSX,
-}
-
-input_copies = copy.deepcopy(inputs)
-'''
-
-#with open(path_prefix + 'symbols', 'wb') as f:
-#    symbols = {
-#        'B': 6,
-#        'H': 16,
-#        'P': 64,
-#        'SM': 64,
-#        'N': 64,
-#        'emb': 64,
-#    }
-#    pickle.dump(symbols, f, pickle.HIGHEST_PROTOCOL)
 
 inputs = None
 symbols = None
@@ -81,6 +24,7 @@ input_copies = copy.deepcopy(inputs)
 
 with dace.config.temporary_config():
     dace.config.Config.set('compiler', 'cpu', 'args', value='-std=c++14 -O0 -Wall -fPIC -Wno-unused-parameter -Wno-unused-label -fopenmp')
+    dace.config.Config.set('compiler', 'allow_view_arguments', value=True)
 
     pre(**inputs, **symbols)
     post(**input_copies, **symbols)
@@ -99,9 +43,8 @@ with dace.config.temporary_config():
                 print('Mismatch in', k)
                 valid = False
 
-print('Valid' if valid else 'INVALID!')
+    print('Valid' if valid else 'INVALID!')
 
-'''
 init_args = {}
 for k in inputs.keys():
     init_args[k] = 'rand'
@@ -109,4 +52,3 @@ for k in inputs.keys():
 sdfg2cpp.dump_args('c++', path_prefix + 'harness', init_args, constraints,
                    pre, post,
                    **inputs, **symbols)
-                   '''
